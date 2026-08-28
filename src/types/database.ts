@@ -9,6 +9,8 @@ export interface Domain {
   color: string;
   active: boolean;
   created_at: string;
+  /** Cible hebdomadaire (1-7). Null = suivi quotidien classique. */
+  weekly_target: number | null;
 }
 
 export interface Checkin {
@@ -18,6 +20,8 @@ export interface Checkin {
   status: CheckinStatus;
   created_at: string;
   updated_at: string;
+  duration_minutes: number | null;
+  comment: string | null;
 }
 
 export interface WeeklyJournalEntry {

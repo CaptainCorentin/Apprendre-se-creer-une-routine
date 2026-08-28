@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { MonthlyJournalEntry, WeeklyJournalEntry } from "@/types/database";
 import { fetchMonthlyEntry, fetchWeeklyEntriesInMonth, upsertMonthlyEntry } from "@/lib/data";
 import { formatMonthFr, formatWeekRangeFr, fromDateKey } from "@/lib/date";
+import { MonthlyCheckinRecap } from "./MonthlyCheckinRecap";
 
 const FIELDS: {
   key: keyof Pick<MonthlyJournalEntry, "domain_trends" | "biggest_learning" | "next_month_intention">;
@@ -73,6 +74,8 @@ export function MonthlyJournalForm({ monthStartKey, onSaved, forced }: Props) {
         <p className="text-sm font-semibold">Journal mensuel</p>
         <p className="text-xs capitalize text-foreground-muted">{formatMonthFr(fromDateKey(monthStartKey))}</p>
       </div>
+
+      <MonthlyCheckinRecap monthStartKey={monthStartKey} />
 
       {weeklyRecap.length > 0 && (
         <div className="rounded-xl border border-border-subtle bg-surface-raised p-3">

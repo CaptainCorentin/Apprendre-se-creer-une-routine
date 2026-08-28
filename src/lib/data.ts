@@ -38,10 +38,16 @@ export async function createDomain(input: {
   name: string;
   icon: string;
   color: string;
+  weekly_target?: number | null;
 }): Promise<Domain> {
   const { data, error } = await supabase
     .from("domains")
-    .insert({ name: input.name, icon: input.icon, color: input.color })
+    .insert({
+      name: input.name,
+      icon: input.icon,
+      color: input.color,
+      weekly_target: input.weekly_target ?? null,
+    })
     .select()
     .single();
   if (error) throw error;
@@ -50,7 +56,7 @@ export async function createDomain(input: {
 
 export async function updateDomain(
   id: string,
-  updates: Partial<Pick<Domain, "name" | "icon" | "color" | "active">>
+  updates: Partial<Pick<Domain, "name" | "icon" | "color" | "active" | "weekly_target">>
 ): Promise<Domain> {
   const { data, error } = await supabase
     .from("domains")
@@ -93,15 +99,41 @@ export async function fetchAllCheckins(): Promise<Checkin[]> {
   return data ?? [];
 }
 
+/** Récupère les checkins de plusieurs domaines sur une plage de dates (bornes incluses). */
+export async function fetchCheckinsInRange(
+  domainIds: string[],
+  startDateKey: string,
+  endDateKey: string
+): Promise<Checkin[]> {
+  if (domainIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("checkins")
+    .select("*")
+    .in("domain_id", domainIds)
+    .gte("date", startDateKey)
+    .lte("date", endDateKey)
+    .order("date", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function upsertCheckin(
   domainId: string,
   dateKey: string,
-  status: CheckinStatus
+  status: CheckinStatus,
+  details?: { duration_minutes?: number | null; comment?: string | null }
 ): Promise<Checkin> {
   const { data, error } = await supabase
     .from("checkins")
     .upsert(
-      { domain_id: domainId, date: dateKey, status, updated_at: new Date().toISOString() },
+      {
+        domain_id: domainId,
+        date: dateKey,
+        status,
+        duration_minutes: details?.duration_minutes ?? null,
+        comment: details?.comment ?? null,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: "domain_id,date" }
     )
     .select()
@@ -110,16 +142,26 @@ export async function upsertCheckin(
   return data;
 }
 
+/** Supprime le checkin d'un domaine à une date donnée (untoggle pour les domaines à cible hebdo). */
+export async function deleteCheckin(domainId: string, dateKey: string): Promise<void> {
+  const { error } = await supabase.from("checkins").delete().eq("domain_id", domainId).eq("date", dateKey);
+  if (error) throw error;
+}
+
 /**
  * Marque rétroactivement comme "missed" tous les jours effectifs passés sans
- * checkin pour un domaine actif, depuis sa création (ou son dernier checkin connu)
- * jusqu'à hier (le jour effectif courant n'est jamais auto-marqué).
+ * checkin pour un domaine actif quotidien, depuis sa création (ou son dernier
+ * checkin connu) jusqu'à hier (le jour effectif courant n'est jamais auto-marqué).
+ *
+ * Les domaines à cible hebdomadaire (`weekly_target` défini) ne sont jamais
+ * auto-marqués : un jour sans checkin y est normal, seule la cible de la
+ * semaine compte.
  */
 export async function backfillMissedCheckins(domains: Domain[]): Promise<void> {
   const todayKey = toDateKey(getEffectiveDate());
 
   for (const domain of domains) {
-    if (!domain.active) continue;
+    if (!domain.active || domain.weekly_target) continue;
 
     const existing = await fetchCheckinsForDomain(domain.id);
     const existingDates = new Set(existing.map((c) => c.date));

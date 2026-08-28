@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { WeeklyJournalEntry } from "@/types/database";
 import { fetchWeeklyEntry, upsertWeeklyEntry } from "@/lib/data";
 import { formatWeekRangeFr } from "@/lib/date";
+import { WeeklyCheckinRecap } from "./WeeklyCheckinRecap";
 
 const FIELDS: { key: keyof Pick<WeeklyJournalEntry, "went_well" | "got_stuck" | "pushed_through" | "process_learning">; label: string; placeholder: string }[] = [
   { key: "went_well", label: "Ce qui a bien marché", placeholder: "Cette semaine, j'ai réussi à…" },
@@ -68,6 +69,9 @@ export function WeeklyJournalForm({ weekStartKey, onSaved, forced }: Props) {
         <p className="text-sm font-semibold">Journal hebdomadaire</p>
         <p className="text-xs text-foreground-muted">Semaine du {formatWeekRangeFr(weekStartKey)}</p>
       </div>
+
+      <WeeklyCheckinRecap weekStartKey={weekStartKey} />
+
       {FIELDS.map((field) => (
         <div key={field.key}>
           <label className="mb-1 block text-xs font-medium text-foreground-muted">{field.label}</label>

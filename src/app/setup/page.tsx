@@ -10,13 +10,14 @@ interface DraftDomain {
   name: string;
   icon: string;
   color: string;
+  weeklyTarget: number | null;
 }
 
 export default function SetupPage() {
   const { refreshDomains } = useAppContext();
   const router = useRouter();
   const [drafts, setDrafts] = useState<DraftDomain[]>([
-    { name: "", icon: DOMAIN_ICONS[0], color: DOMAIN_COLORS[0] },
+    { name: "", icon: DOMAIN_ICONS[0], color: DOMAIN_COLORS[0], weeklyTarget: null },
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +33,7 @@ export default function SetupPage() {
         name: "",
         icon: DOMAIN_ICONS[prev.length % DOMAIN_ICONS.length],
         color: DOMAIN_COLORS[prev.length % DOMAIN_COLORS.length],
+        weeklyTarget: null,
       },
     ]);
   }
@@ -51,7 +53,12 @@ export default function SetupPage() {
     setError(null);
     try {
       for (const draft of valid) {
-        await createDomain({ name: draft.name.trim(), icon: draft.icon, color: draft.color });
+        await createDomain({
+          name: draft.name.trim(),
+          icon: draft.icon,
+          color: draft.color,
+          weekly_target: draft.weeklyTarget,
+        });
       }
       await refreshDomains();
       router.replace("/");
@@ -119,6 +126,44 @@ export default function SetupPage() {
                   aria-label={`Couleur ${color}`}
                 />
               ))}
+            </div>
+
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => updateDraft(index, { weeklyTarget: null })}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition ${
+                  draft.weeklyTarget === null
+                    ? "bg-accent text-white"
+                    : "bg-surface-raised text-foreground-muted"
+                }`}
+              >
+                Tous les jours
+              </button>
+              <button
+                type="button"
+                onClick={() => updateDraft(index, { weeklyTarget: draft.weeklyTarget ?? 3 })}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition ${
+                  draft.weeklyTarget !== null
+                    ? "bg-accent text-white"
+                    : "bg-surface-raised text-foreground-muted"
+                }`}
+              >
+                X fois / semaine
+              </button>
+              {draft.weeklyTarget !== null && (
+                <select
+                  value={draft.weeklyTarget}
+                  onChange={(e) => updateDraft(index, { weeklyTarget: Number(e.target.value) })}
+                  className="rounded-lg border border-border-subtle bg-surface-raised px-2 py-1.5 text-xs"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                    <option key={n} value={n}>
+                      {n}x
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         ))}

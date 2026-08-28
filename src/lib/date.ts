@@ -73,6 +73,19 @@ export function formatWeekRangeFr(weekStartKey: string): string {
   return `${start.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`;
 }
 
+/** Les débuts de semaine (lundi) qui recouvrent au moins un jour du mois donné. */
+export function getWeeksOverlappingMonth(monthStartKey: string): string[] {
+  const monthStart = fromDateKey(monthStartKey);
+  const nextMonthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+  const weeks: string[] = [];
+  let cursor = getWeekStart(monthStart);
+  while (cursor < nextMonthStart) {
+    weeks.push(toDateKey(cursor));
+    cursor = addDays(cursor, 7);
+  }
+  return weeks;
+}
+
 /** Liste des N derniers jours effectifs (le plus récent en premier). */
 export function lastNDays(n: number, now: Date = new Date()): string[] {
   const today = getEffectiveDate(now);

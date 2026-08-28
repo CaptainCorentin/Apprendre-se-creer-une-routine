@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useAppContext } from "@/components/AppProvider";
 import { DomainCard } from "@/components/DomainCard";
 import { MotivationModal } from "@/components/MotivationModal";
+import type { CheckinEdit } from "@/components/CatchupRow";
 import type { Checkin, CheckinStatus, ContextTag, IdolWithQuotes } from "@/types/database";
-import { fetchAllCheckins, fetchIdolsWithQuotes, upsertCheckin } from "@/lib/data";
-import { calculateStreak, getMilestoneReached } from "@/lib/streaks";
+import { deleteCheckin, fetchAllCheckins, fetchIdolsWithQuotes, upsertCheckin } from "@/lib/data";
+import { calculateStreak, calculateWeeklyStreak, getMilestoneReached, getWeeklyMilestoneReached } from "@/lib/streaks";
+import { getEffectiveDateKey } from "@/lib/date";
 import {
   hasRolledRandomPopupToday,
   markRandomPopupRolledToday,
@@ -71,28 +73,58 @@ export default function TodayPage() {
     if (quote) setPopup(quote);
   }
 
-  async function handleCheckin(domainId: string, dateKey: string, status: CheckinStatus) {
+  async function handleCheckin(
+    domainId: string,
+    dateKey: string,
+    status: CheckinStatus | "none",
+    details?: CheckinEdit
+  ) {
+    const domain = activeDomains.find((d) => d.id === domainId);
     const domainCheckins = checkins.filter((c) => c.domain_id === domainId);
-    const previousStreak = calculateStreak(domainCheckins);
+    const isToday = dateKey === getEffectiveDateKey();
+    const existing = domainCheckins.find((c) => c.date === dateKey);
 
-    const saved = await upsertCheckin(domainId, dateKey, status);
+    if (status === "none") {
+      await deleteCheckin(domainId, dateKey);
+      setCheckins((prev) => prev.filter((c) => !(c.domain_id === domainId && c.date === dateKey)));
+      return;
+    }
+
+    const saved = await upsertCheckin(domainId, dateKey, status, {
+      duration_minutes: details?.duration_minutes ?? existing?.duration_minutes ?? null,
+      comment: details?.comment ?? existing?.comment ?? null,
+    });
     setCheckins((prev) => {
       const withoutOld = prev.filter((c) => !(c.domain_id === domainId && c.date === dateKey));
       return [...withoutOld, saved];
     });
 
-    const updatedDomainCheckins = [
-      ...domainCheckins.filter((c) => c.date !== dateKey),
-      saved,
-    ];
-    const newStreak = calculateStreak(updatedDomainCheckins);
+    // Les moments clés (streak cassé / palier / repos) ne se déclenchent que
+    // pour une action sur le jour effectif courant, pas pour un rattrapage.
+    if (!isToday || !domain) return;
 
-    if (status === "missed" && previousStreak > 0) {
-      showKeyMomentPopup("streak_broken");
-    } else if (status === "rest_assumed") {
-      showKeyMomentPopup("rest_day");
-    } else if (status === "done" && getMilestoneReached(newStreak)) {
-      showKeyMomentPopup("milestone");
+    const updatedDomainCheckins = [...domainCheckins.filter((c) => c.date !== dateKey), saved];
+
+    if (domain.weekly_target) {
+      const previous = calculateWeeklyStreak(domainCheckins, domain.weekly_target);
+      const updated = calculateWeeklyStreak(updatedDomainCheckins, domain.weekly_target);
+      if (status === "missed") {
+        showKeyMomentPopup("streak_broken");
+      } else if (status === "rest_assumed") {
+        showKeyMomentPopup("rest_day");
+      } else if (status === "done" && updated.streak > previous.streak && getWeeklyMilestoneReached(updated.streak)) {
+        showKeyMomentPopup("milestone");
+      }
+    } else {
+      const previousStreak = calculateStreak(domainCheckins);
+      const newStreak = calculateStreak(updatedDomainCheckins);
+      if (status === "missed" && previousStreak > 0) {
+        showKeyMomentPopup("streak_broken");
+      } else if (status === "rest_assumed") {
+        showKeyMomentPopup("rest_day");
+      } else if (status === "done" && getMilestoneReached(newStreak)) {
+        showKeyMomentPopup("milestone");
+      }
     }
   }
 

@@ -10,6 +10,7 @@ export function DomainsSettings() {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState(DOMAIN_ICONS[0]);
   const [color, setColor] = useState(DOMAIN_COLORS[0]);
+  const [weeklyTarget, setWeeklyTarget] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,8 +20,9 @@ export function DomainsSettings() {
     if (!name.trim()) return;
     setBusy(true);
     try {
-      await createDomain({ name: name.trim(), icon, color });
+      await createDomain({ name: name.trim(), icon, color, weekly_target: weeklyTarget });
       setName("");
+      setWeeklyTarget(null);
       await refreshDomains();
     } finally {
       setBusy(false);
@@ -29,6 +31,11 @@ export function DomainsSettings() {
 
   async function toggleActive(id: string, active: boolean) {
     await updateDomain(id, { active: !active });
+    await refreshDomains();
+  }
+
+  async function changeWeeklyTarget(id: string, value: string) {
+    await updateDomain(id, { weekly_target: value === "" ? null : Number(value) });
     await refreshDomains();
   }
 
@@ -45,53 +52,68 @@ export function DomainsSettings() {
 
       <div className="mt-3 space-y-2">
         {domains.map((domain) => (
-          <div
-            key={domain.id}
-            className="carbon-panel flex items-center gap-2 rounded-xl p-3"
-          >
-            <span className="text-xl">{domain.icon}</span>
-            {editingId === domain.id ? (
-              <input
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                className="flex-1 rounded-lg border border-border-subtle bg-surface-raised px-2 py-1 text-sm outline-none focus:border-accent"
-                autoFocus
-              />
-            ) : (
-              <span className={`flex-1 text-sm ${!domain.active ? "text-foreground-muted line-through" : ""}`}>
-                {domain.name}
-              </span>
-            )}
+          <div key={domain.id} className="carbon-panel rounded-xl p-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">{domain.icon}</span>
+              {editingId === domain.id ? (
+                <input
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  className="flex-1 rounded-lg border border-border-subtle bg-surface-raised px-2 py-1 text-sm outline-none focus:border-accent"
+                  autoFocus
+                />
+              ) : (
+                <span className={`flex-1 text-sm ${!domain.active ? "text-foreground-muted line-through" : ""}`}>
+                  {domain.name}
+                </span>
+              )}
 
-            {editingId === domain.id ? (
-              <button
-                onClick={() => saveRename(domain.id)}
-                className="text-xs font-medium text-accent-strong"
-              >
-                OK
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setEditingId(domain.id);
-                  setEditingName(domain.name);
-                }}
-                className="text-xs text-foreground-muted hover:text-accent-strong"
-              >
-                Renommer
-              </button>
-            )}
+              {editingId === domain.id ? (
+                <button
+                  onClick={() => saveRename(domain.id)}
+                  className="text-xs font-medium text-accent-strong"
+                >
+                  OK
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setEditingId(domain.id);
+                    setEditingName(domain.name);
+                  }}
+                  className="text-xs text-foreground-muted hover:text-accent-strong"
+                >
+                  Renommer
+                </button>
+              )}
 
-            <button
-              onClick={() => toggleActive(domain.id, domain.active)}
-              className={`rounded-lg px-2 py-1 text-xs font-medium ${
-                domain.active
-                  ? "bg-surface-raised text-foreground-muted hover:text-accent-strong"
-                  : "bg-accent/15 text-accent-strong"
-              }`}
-            >
-              {domain.active ? "Désactiver" : "Réactiver"}
-            </button>
+              <button
+                onClick={() => toggleActive(domain.id, domain.active)}
+                className={`rounded-lg px-2 py-1 text-xs font-medium ${
+                  domain.active
+                    ? "bg-surface-raised text-foreground-muted hover:text-accent-strong"
+                    : "bg-accent/15 text-accent-strong"
+                }`}
+              >
+                {domain.active ? "Désactiver" : "Réactiver"}
+              </button>
+            </div>
+
+            <div className="mt-2 flex items-center gap-2 pl-8">
+              <span className="text-[11px] text-foreground-muted">Fréquence :</span>
+              <select
+                value={domain.weekly_target ?? ""}
+                onChange={(e) => changeWeeklyTarget(domain.id, e.target.value)}
+                className="rounded border border-border-subtle bg-surface-raised px-1.5 py-1 text-[11px]"
+              >
+                <option value="">Tous les jours</option>
+                {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                  <option key={n} value={n}>
+                    {n}x / semaine
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         ))}
       </div>
@@ -129,6 +151,20 @@ export function DomainsSettings() {
               style={{ backgroundColor: c }}
             />
           ))}
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <select
+            value={weeklyTarget ?? ""}
+            onChange={(e) => setWeeklyTarget(e.target.value === "" ? null : Number(e.target.value))}
+            className="rounded-lg border border-border-subtle bg-surface-raised px-2 py-1.5 text-xs"
+          >
+            <option value="">Tous les jours</option>
+            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+              <option key={n} value={n}>
+                {n}x / semaine
+              </option>
+            ))}
+          </select>
         </div>
         <button
           type="submit"

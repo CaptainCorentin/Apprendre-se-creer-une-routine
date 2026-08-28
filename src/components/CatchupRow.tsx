@@ -17,17 +17,55 @@ const STATUS_LABEL: Record<CheckinStatus, string> = {
   rest_assumed: "Repos assumé",
 };
 
+export interface CheckinEdit {
+  status: CheckinStatus | "none";
+  duration_minutes: number | null;
+  comment: string | null;
+}
+
 interface Props {
   checkinsByDate: Map<string, Checkin>;
   color: string;
-  onEdit: (dateKey: string, status: CheckinStatus) => void;
+  onEdit: (dateKey: string, edit: CheckinEdit) => void;
   todayKey: string;
+  /** Domaine à cible hebdomadaire : un simple toggle "Fait" au lieu des 3 statuts. */
+  flexible?: boolean;
 }
 
-export function CatchupRow({ checkinsByDate, color, onEdit, todayKey }: Props) {
+export function CatchupRow({ checkinsByDate, color, onEdit, todayKey, flexible }: Props) {
   const [open, setOpen] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [status, setStatus] = useState<CheckinStatus>("done");
+  const [minutes, setMinutes] = useState("");
+  const [comment, setComment] = useState("");
   const days = lastNDays(CATCHUP_DAYS).filter((d) => d !== todayKey);
+
+  function startEditing(day: string) {
+    const existing = checkinsByDate.get(day);
+    if (flexible) {
+      if (existing) {
+        onEdit(day, { status: "none", duration_minutes: null, comment: null });
+        return;
+      }
+      setMinutes("");
+      setComment("");
+      setEditingDate(editingDate === day ? null : day);
+      return;
+    }
+    setStatus(existing?.status ?? "done");
+    setMinutes(existing?.duration_minutes?.toString() ?? "");
+    setComment(existing?.comment ?? "");
+    setEditingDate(editingDate === day ? null : day);
+  }
+
+  function save(day: string) {
+    onEdit(day, {
+      status: flexible ? "done" : status,
+      duration_minutes: minutes.trim() ? Number(minutes) : null,
+      comment: comment.trim() ? comment.trim() : null,
+    });
+    setEditingDate(null);
+  }
 
   return (
     <div className="mt-3">
@@ -46,7 +84,7 @@ export function CatchupRow({ checkinsByDate, color, onEdit, todayKey }: Props) {
             return (
               <div key={day} className="relative">
                 <button
-                  onClick={() => setEditingDate(isEditing ? null : day)}
+                  onClick={() => startEditing(day)}
                   className="flex flex-col items-center gap-1 rounded-lg border border-border-subtle bg-surface-raised px-2 py-1.5 text-[10px]"
                   style={checkin ? { borderColor: color } : undefined}
                 >
@@ -54,20 +92,45 @@ export function CatchupRow({ checkinsByDate, color, onEdit, todayKey }: Props) {
                   <span className="text-foreground-muted">{formatDateFr(day)}</span>
                 </button>
                 {isEditing && (
-                  <div className="absolute bottom-full left-1/2 z-10 mb-2 w-36 -translate-x-1/2 rounded-xl border border-border-subtle bg-surface-raised p-1.5 shadow-xl">
-                    {(Object.keys(STATUS_LABEL) as CheckinStatus[]).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => {
-                          onEdit(day, status);
-                          setEditingDate(null);
-                        }}
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs hover:bg-surface"
-                      >
-                        <span>{STATUS_ICON[status]}</span>
-                        {STATUS_LABEL[status]}
-                      </button>
-                    ))}
+                  <div className="absolute bottom-full left-1/2 z-10 mb-2 w-48 -translate-x-1/2 rounded-xl border border-border-subtle bg-surface-raised p-2 shadow-xl">
+                    {!flexible && (
+                      <div className="flex flex-col gap-1">
+                        {(Object.keys(STATUS_LABEL) as CheckinStatus[]).map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => setStatus(s)}
+                            className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs ${
+                              status === s ? "bg-accent/15 text-accent-strong" : "hover:bg-surface"
+                            }`}
+                          >
+                            <span>{STATUS_ICON[s]}</span>
+                            {STATUS_LABEL[s]}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      placeholder="Minutes"
+                      value={minutes}
+                      onChange={(e) => setMinutes(e.target.value)}
+                      className="mt-2 w-full rounded-lg border border-border-subtle bg-surface px-2 py-1 text-xs outline-none focus:border-accent"
+                    />
+                    <textarea
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Commentaire…"
+                      rows={2}
+                      className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2 py-1 text-xs outline-none focus:border-accent"
+                    />
+                    <button
+                      onClick={() => save(day)}
+                      className="mt-1 w-full rounded-lg bg-accent py-1.5 text-xs font-semibold text-white hover:bg-accent-strong"
+                    >
+                      Enregistrer
+                    </button>
                   </div>
                 )}
               </div>
