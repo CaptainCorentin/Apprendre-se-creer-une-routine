@@ -58,6 +58,12 @@ export function isFirstSundayOfMonth(d: Date): boolean {
   return d.getDate() <= 7;
 }
 
+export function getFirstSundayOfMonth(monthStart: Date): Date {
+  const d = new Date(monthStart);
+  while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
+  return d;
+}
+
 export function formatDateFr(key: string): string {
   const d = fromDateKey(key);
   return d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });

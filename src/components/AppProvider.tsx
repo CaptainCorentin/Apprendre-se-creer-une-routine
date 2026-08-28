@@ -11,6 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { Domain } from "@/types/database";
 import { backfillMissedCheckins, fetchDomains } from "@/lib/data";
 import { clearStoredProfileId, getStoredProfileId, listProfiles, storeProfileId } from "@/lib/profiles";
+import { checkJournalDue } from "@/lib/journalStatus";
 
 interface AppContextValue {
   profileId: string | null;
@@ -21,6 +22,8 @@ interface AppContextValue {
   refreshDomains: () => Promise<void>;
   loginAs: (profileId: string) => void;
   logout: () => void;
+  journalDue: boolean;
+  refreshJournalDue: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -36,8 +39,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
+  const [journalDue, setJournalDue] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  const refreshJournalDue = useCallback(async () => {
+    if (!profileId) return;
+    const status = await checkJournalDue(profileId);
+    setJournalDue(status.weekly || status.monthly);
+  }, [profileId]);
 
   const refreshDomains = useCallback(async () => {
     if (!profileId) return;
@@ -49,6 +59,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     clearStoredProfileId();
     setProfileId(null);
     setDomains([]);
+    setJournalDue(false);
     router.replace("/profiles");
   }, [router]);
 
@@ -120,6 +131,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [profileId]);
 
   useEffect(() => {
+    if (!profileId) return;
+    checkJournalDue(profileId).then((status) => setJournalDue(status.weekly || status.monthly));
+  }, [profileId]);
+
+  useEffect(() => {
     if (!ready) return;
 
     if (!profileId) {
@@ -144,7 +160,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider
-      value={{ profileId, domains, activeDomains, loading, ready, refreshDomains, loginAs, logout }}
+      value={{
+        profileId,
+        domains,
+        activeDomains,
+        loading,
+        ready,
+        refreshDomains,
+        loginAs,
+        logout,
+        journalDue,
+        refreshJournalDue,
+      }}
     >
       {children}
     </AppContext.Provider>

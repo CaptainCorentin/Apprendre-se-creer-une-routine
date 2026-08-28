@@ -13,7 +13,7 @@ const TABS = [
 
 export function NavBar() {
   const pathname = usePathname();
-  const { ready, profileId, domains } = useAppContext();
+  const { ready, profileId, domains, journalDue } = useAppContext();
 
   if (!ready || !profileId || domains.length === 0 || pathname === "/setup" || pathname === "/profiles") {
     return null;
@@ -32,8 +32,13 @@ export function NavBar() {
                 active ? "text-accent-strong" : "text-foreground-muted"
               }`}
             >
-              <span className={`text-xl ${active ? "drop-shadow-[0_0_8px_rgba(255,45,62,0.6)]" : ""}`}>
-                {tab.icon}
+              <span className="relative">
+                <span className={`text-xl ${active ? "drop-shadow-[0_0_8px_rgba(255,45,62,0.6)]" : ""}`}>
+                  {tab.icon}
+                </span>
+                {tab.href === "/journal" && journalDue && (
+                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent-strong" />
+                )}
               </span>
               <span className="font-medium">{tab.label}</span>
             </Link>

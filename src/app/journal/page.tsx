@@ -5,26 +5,40 @@ import { WeeklyJournalForm } from "@/components/WeeklyJournalForm";
 import { MonthlyJournalForm } from "@/components/MonthlyJournalForm";
 import { useAppContext } from "@/components/AppProvider";
 import { fetchAllMonthlyEntries, fetchAllWeeklyEntries } from "@/lib/data";
+import { checkJournalDue } from "@/lib/journalStatus";
 import type { MonthlyJournalEntry, WeeklyJournalEntry } from "@/types/database";
 import { formatMonthFr, formatWeekRangeFr, fromDateKey, getMonthStart, getWeekStart, toDateKey } from "@/lib/date";
 
 type Tab = "hebdo" | "mensuel";
 
 export default function JournalPage() {
-  const { profileId } = useAppContext();
+  const { profileId, refreshJournalDue } = useAppContext();
   const [tab, setTab] = useState<Tab>("hebdo");
   const [weeklyHistory, setWeeklyHistory] = useState<WeeklyJournalEntry[]>([]);
   const [monthlyHistory, setMonthlyHistory] = useState<MonthlyJournalEntry[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
-
-  const currentWeekKey = toDateKey(getWeekStart(new Date()));
-  const currentMonthKey = toDateKey(getMonthStart(new Date()));
+  const [weekKey, setWeekKey] = useState(() => toDateKey(getWeekStart(new Date())));
+  const [monthKey, setMonthKey] = useState(() => toDateKey(getMonthStart(new Date())));
 
   useEffect(() => {
     if (!profileId) return;
     fetchAllWeeklyEntries(profileId).then(setWeeklyHistory);
     fetchAllMonthlyEntries(profileId).then(setMonthlyHistory);
+    checkJournalDue(profileId).then((status) => {
+      setWeekKey(status.weekly ? status.weekKey : toDateKey(getWeekStart(new Date())));
+      if (status.monthly && status.monthKey) {
+        setMonthKey(status.monthKey);
+        setTab((current) => (current === "hebdo" && !status.weekly ? "mensuel" : current));
+      } else {
+        setMonthKey(toDateKey(getMonthStart(new Date())));
+      }
+    });
   }, [profileId, refreshKey]);
+
+  function handleSaved() {
+    setRefreshKey((k) => k + 1);
+    refreshJournalDue();
+  }
 
   return (
     <div className="mx-auto max-w-md px-4 pt-8">
@@ -52,17 +66,9 @@ export default function JournalPage() {
 
       <div className="mt-5 carbon-panel rounded-2xl p-4">
         {tab === "hebdo" ? (
-          <WeeklyJournalForm
-            key={`week-${currentWeekKey}-${refreshKey}`}
-            weekStartKey={currentWeekKey}
-            onSaved={() => setRefreshKey((k) => k + 1)}
-          />
+          <WeeklyJournalForm key={`week-${weekKey}-${refreshKey}`} weekStartKey={weekKey} onSaved={handleSaved} />
         ) : (
-          <MonthlyJournalForm
-            key={`month-${currentMonthKey}-${refreshKey}`}
-            monthStartKey={currentMonthKey}
-            onSaved={() => setRefreshKey((k) => k + 1)}
-          />
+          <MonthlyJournalForm key={`month-${monthKey}-${refreshKey}`} monthStartKey={monthKey} onSaved={handleSaved} />
         )}
       </div>
 

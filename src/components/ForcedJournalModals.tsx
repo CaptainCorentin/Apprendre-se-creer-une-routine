@@ -18,7 +18,7 @@ import { WEEKLY_REMINDER_WEEKDAY } from "@/lib/constants";
 type Step = "checking" | "weekly" | "monthly" | "done";
 
 export function ForcedJournalModals() {
-  const { ready, profileId, domains } = useAppContext();
+  const { ready, profileId, domains, refreshJournalDue } = useAppContext();
   const [step, setStep] = useState<Step>("checking");
   const [weekStartKey, setWeekStartKey] = useState<string | null>(null);
   const [prevMonthStartKey, setPrevMonthStartKey] = useState<string | null>(null);
@@ -76,6 +76,7 @@ export function ForcedJournalModals() {
             weekStartKey={weekStartKey}
             forced
             onSaved={() => {
+              refreshJournalDue();
               if (prevMonthStartKey) {
                 setStep("monthly");
               } else {
@@ -88,7 +89,10 @@ export function ForcedJournalModals() {
           <MonthlyJournalForm
             monthStartKey={prevMonthStartKey}
             forced
-            onSaved={() => setStep("done")}
+            onSaved={() => {
+              refreshJournalDue();
+              setStep("done");
+            }}
           />
         )}
       </div>
