@@ -7,6 +7,7 @@ import {
   createIdolQuote,
   deleteIdolQuote,
   fetchIdolsWithQuotes,
+  updateIdol,
   updateIdolQuote,
   uploadIdolPhoto,
 } from "@/lib/data";
@@ -51,7 +52,8 @@ export function IdolsSettings() {
     if (!file) return;
     setBusyIdolId(idolId);
     try {
-      await uploadIdolPhoto(idolId, file);
+      const photoUrl = await uploadIdolPhoto(idolId, file);
+      await updateIdol(idolId, { photo_url: photoUrl });
       await refresh();
     } finally {
       setBusyIdolId(null);
