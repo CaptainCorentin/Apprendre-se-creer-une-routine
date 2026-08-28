@@ -389,6 +389,13 @@ export async function deleteIdolQuote(id: string): Promise<void> {
 }
 
 export async function uploadIdolPhoto(idolId: string, file: File): Promise<string> {
+  // Supprime les anciennes photos de cette idole avant d'uploader la nouvelle,
+  // pour ne pas accumuler des fichiers orphelins dans le storage.
+  const { data: existingFiles } = await supabase.storage.from("idol-photos").list(idolId);
+  if (existingFiles && existingFiles.length > 0) {
+    await supabase.storage.from("idol-photos").remove(existingFiles.map((f) => `${idolId}/${f.name}`));
+  }
+
   const ext = file.name.split(".").pop() ?? "jpg";
   const path = `${idolId}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("idol-photos").upload(path, file, { upsert: true });
