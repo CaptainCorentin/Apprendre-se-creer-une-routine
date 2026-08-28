@@ -62,6 +62,11 @@ export function WeeklyCheckinRecap({ weekStartKey }: Props) {
                       {c ? (
                         <span title={c.comment ?? undefined}>
                           {STATUS_ICON[c.status]}
+                          {c.value_achieved != null && (
+                            <span className="ml-0.5 text-[9px] text-foreground-muted">
+                              {c.value_achieved}{d.target_unit ?? ""}
+                            </span>
+                          )}
                           {c.duration_minutes != null && (
                             <span className="ml-0.5 text-[9px] text-foreground-muted">
                               {c.duration_minutes}m

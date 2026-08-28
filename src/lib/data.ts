@@ -42,6 +42,8 @@ export async function createDomain(input: {
   icon: string;
   color: string;
   weekly_target?: number | null;
+  target_value?: number | null;
+  target_unit?: string | null;
 }): Promise<Domain> {
   const { data, error } = await supabase
     .from("domains")
@@ -51,6 +53,8 @@ export async function createDomain(input: {
       icon: input.icon,
       color: input.color,
       weekly_target: input.weekly_target ?? null,
+      target_value: input.target_value ?? null,
+      target_unit: input.target_unit ?? null,
     })
     .select()
     .single();
@@ -60,7 +64,9 @@ export async function createDomain(input: {
 
 export async function updateDomain(
   id: string,
-  updates: Partial<Pick<Domain, "name" | "icon" | "color" | "active" | "weekly_target">>
+  updates: Partial<
+    Pick<Domain, "name" | "icon" | "color" | "active" | "weekly_target" | "target_value" | "target_unit">
+  >
 ): Promise<Domain> {
   const { data, error } = await supabase
     .from("domains")
@@ -130,7 +136,7 @@ export async function upsertCheckin(
   domainId: string,
   dateKey: string,
   status: CheckinStatus,
-  details?: { duration_minutes?: number | null; comment?: string | null }
+  details?: { duration_minutes?: number | null; comment?: string | null; value_achieved?: number | null }
 ): Promise<Checkin> {
   const { data, error } = await supabase
     .from("checkins")
@@ -142,6 +148,7 @@ export async function upsertCheckin(
         status,
         duration_minutes: details?.duration_minutes ?? null,
         comment: details?.comment ?? null,
+        value_achieved: details?.value_achieved ?? null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "domain_id,date" }

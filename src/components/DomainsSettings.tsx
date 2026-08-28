@@ -11,6 +11,8 @@ export function DomainsSettings() {
   const [icon, setIcon] = useState(DOMAIN_ICONS[0]);
   const [color, setColor] = useState(DOMAIN_COLORS[0]);
   const [weeklyTarget, setWeeklyTarget] = useState<number | null>(null);
+  const [targetValue, setTargetValue] = useState("");
+  const [targetUnit, setTargetUnit] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,9 +22,19 @@ export function DomainsSettings() {
     if (!name.trim() || !profileId) return;
     setBusy(true);
     try {
-      await createDomain({ profileId, name: name.trim(), icon, color, weekly_target: weeklyTarget });
+      await createDomain({
+        profileId,
+        name: name.trim(),
+        icon,
+        color,
+        weekly_target: weeklyTarget,
+        target_value: targetValue.trim() ? Number(targetValue) : null,
+        target_unit: targetUnit.trim() || null,
+      });
       setName("");
       setWeeklyTarget(null);
+      setTargetValue("");
+      setTargetUnit("");
       await refreshDomains();
     } finally {
       setBusy(false);
@@ -36,6 +48,14 @@ export function DomainsSettings() {
 
   async function changeWeeklyTarget(id: string, value: string) {
     await updateDomain(id, { weekly_target: value === "" ? null : Number(value) });
+    await refreshDomains();
+  }
+
+  async function changeTarget(id: string, value: string, unit: string) {
+    await updateDomain(id, {
+      target_value: value.trim() ? Number(value) : null,
+      target_unit: unit.trim() || null,
+    });
     await refreshDomains();
   }
 
@@ -114,6 +134,26 @@ export function DomainsSettings() {
                 ))}
               </select>
             </div>
+
+            <div className="mt-2 flex items-center gap-2 pl-8">
+              <span className="text-[11px] text-foreground-muted">Objectif :</span>
+              <input
+                type="number"
+                min={0}
+                step="any"
+                defaultValue={domain.target_value ?? ""}
+                onBlur={(e) => changeTarget(domain.id, e.target.value, domain.target_unit ?? "")}
+                placeholder="Valeur"
+                className="w-20 rounded border border-border-subtle bg-surface-raised px-1.5 py-1 text-[11px] outline-none focus:border-accent"
+              />
+              <input
+                type="text"
+                defaultValue={domain.target_unit ?? ""}
+                onBlur={(e) => changeTarget(domain.id, domain.target_value?.toString() ?? "", e.target.value)}
+                placeholder="Unité"
+                className="w-24 rounded border border-border-subtle bg-surface-raised px-1.5 py-1 text-[11px] outline-none focus:border-accent"
+              />
+            </div>
           </div>
         ))}
       </div>
@@ -165,6 +205,24 @@ export function DomainsSettings() {
               </option>
             ))}
           </select>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            type="number"
+            min={0}
+            step="any"
+            placeholder="Objectif chiffré (optionnel)"
+            value={targetValue}
+            onChange={(e) => setTargetValue(e.target.value)}
+            className="w-40 rounded-lg border border-border-subtle bg-surface-raised px-2 py-1.5 text-xs outline-none focus:border-accent"
+          />
+          <input
+            type="text"
+            placeholder="Unité (L, pages…)"
+            value={targetUnit}
+            onChange={(e) => setTargetUnit(e.target.value)}
+            className="flex-1 rounded-lg border border-border-subtle bg-surface-raised px-2 py-1.5 text-xs outline-none focus:border-accent"
+          />
         </div>
         <button
           type="submit"

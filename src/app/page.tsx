@@ -96,6 +96,7 @@ export default function TodayPage() {
     const saved = await upsertCheckin(profileId, domainId, dateKey, status, {
       duration_minutes: details?.duration_minutes ?? existing?.duration_minutes ?? null,
       comment: details?.comment ?? existing?.comment ?? null,
+      value_achieved: details?.value_achieved ?? existing?.value_achieved ?? null,
     });
     setCheckins((prev) => {
       const withoutOld = prev.filter((c) => !(c.domain_id === domainId && c.date === dateKey));

@@ -5,36 +5,58 @@ import type { Checkin } from "@/types/database";
 
 interface Props {
   checkin: Checkin | undefined;
-  onSave: (details: { duration_minutes: number | null; comment: string | null }) => void;
+  targetUnit?: string | null;
+  onSave: (details: { duration_minutes: number | null; comment: string | null; value_achieved: number | null }) => void;
 }
 
-export function CheckinDetailsEditor({ checkin, onSave }: Props) {
+export function CheckinDetailsEditor({ checkin, targetUnit, onSave }: Props) {
   const [open, setOpen] = useState(false);
   const [minutes, setMinutes] = useState(checkin?.duration_minutes?.toString() ?? "");
   const [comment, setComment] = useState(checkin?.comment ?? "");
+  const [value, setValue] = useState(checkin?.value_achieved?.toString() ?? "");
 
   if (!checkin) return null;
 
-  const hasDetails = checkin.duration_minutes != null || (checkin.comment && checkin.comment.length > 0);
+  const hasDetails =
+    checkin.duration_minutes != null ||
+    (checkin.comment && checkin.comment.length > 0) ||
+    checkin.value_achieved != null;
 
   if (!open) {
+    const parts = [
+      checkin.value_achieved != null ? `${checkin.value_achieved}${targetUnit ? ` ${targetUnit}` : ""}` : null,
+      checkin.duration_minutes != null ? `${checkin.duration_minutes} min` : null,
+      checkin.comment || null,
+    ].filter(Boolean);
+
     return (
       <button
         onClick={() => setOpen(true)}
         className="mt-3 text-xs text-foreground-muted underline decoration-dotted underline-offset-2 hover:text-accent-strong"
       >
-        {hasDetails
-          ? `${checkin.duration_minutes != null ? `${checkin.duration_minutes} min` : ""}${
-              checkin.duration_minutes != null && checkin.comment ? " · " : ""
-            }${checkin.comment ?? ""}`
-          : "+ Ajouter un temps / commentaire"}
+        {hasDetails ? parts.join(" · ") : "+ Ajouter un temps / commentaire"}
       </button>
     );
   }
 
   return (
     <div className="mt-3 rounded-xl border border-border-subtle bg-surface-raised p-3">
-      <div className="flex items-center gap-2">
+      {targetUnit && (
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={0}
+            step="any"
+            inputMode="decimal"
+            placeholder="Valeur"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="w-24 rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
+          />
+          <span className="text-xs text-foreground-muted">{targetUnit}</span>
+        </div>
+      )}
+      <div className="mt-2 flex items-center gap-2">
         <input
           type="number"
           min={0}
@@ -59,6 +81,7 @@ export function CheckinDetailsEditor({ checkin, onSave }: Props) {
             onSave({
               duration_minutes: minutes.trim() ? Number(minutes) : null,
               comment: comment.trim() ? comment.trim() : null,
+              value_achieved: value.trim() ? Number(value) : null,
             });
             setOpen(false);
           }}

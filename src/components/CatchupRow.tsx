@@ -21,6 +21,7 @@ export interface CheckinEdit {
   status: CheckinStatus | "none";
   duration_minutes: number | null;
   comment: string | null;
+  value_achieved: number | null;
 }
 
 interface Props {
@@ -30,31 +31,36 @@ interface Props {
   todayKey: string;
   /** Domaine à cible hebdomadaire : un simple toggle "Fait" au lieu des 3 statuts. */
   flexible?: boolean;
+  /** Domaine à objectif chiffré (ex: "2 L") : ajoute un champ valeur. */
+  targetUnit?: string | null;
 }
 
-export function CatchupRow({ checkinsByDate, color, onEdit, todayKey, flexible }: Props) {
+export function CatchupRow({ checkinsByDate, color, onEdit, todayKey, flexible, targetUnit }: Props) {
   const [open, setOpen] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [status, setStatus] = useState<CheckinStatus>("done");
   const [minutes, setMinutes] = useState("");
   const [comment, setComment] = useState("");
+  const [value, setValue] = useState("");
   const days = lastNDays(CATCHUP_DAYS).filter((d) => d !== todayKey);
 
   function startEditing(day: string) {
     const existing = checkinsByDate.get(day);
     if (flexible) {
       if (existing) {
-        onEdit(day, { status: "none", duration_minutes: null, comment: null });
+        onEdit(day, { status: "none", duration_minutes: null, comment: null, value_achieved: null });
         return;
       }
       setMinutes("");
       setComment("");
+      setValue("");
       setEditingDate(editingDate === day ? null : day);
       return;
     }
     setStatus(existing?.status ?? "done");
     setMinutes(existing?.duration_minutes?.toString() ?? "");
     setComment(existing?.comment ?? "");
+    setValue(existing?.value_achieved?.toString() ?? "");
     setEditingDate(editingDate === day ? null : day);
   }
 
@@ -63,6 +69,7 @@ export function CatchupRow({ checkinsByDate, color, onEdit, todayKey, flexible }
       status: flexible ? "done" : status,
       duration_minutes: minutes.trim() ? Number(minutes) : null,
       comment: comment.trim() ? comment.trim() : null,
+      value_achieved: value.trim() ? Number(value) : null,
     });
     setEditingDate(null);
   }
@@ -108,6 +115,18 @@ export function CatchupRow({ checkinsByDate, color, onEdit, todayKey, flexible }
                           </button>
                         ))}
                       </div>
+                    )}
+                    {targetUnit && (
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        inputMode="decimal"
+                        placeholder={`Valeur (${targetUnit})`}
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="mt-2 w-full rounded-lg border border-border-subtle bg-surface px-2 py-1 text-xs outline-none focus:border-accent"
+                      />
                     )}
                     <input
                       type="number"

@@ -11,13 +11,15 @@ interface DraftDomain {
   icon: string;
   color: string;
   weeklyTarget: number | null;
+  targetValue: string;
+  targetUnit: string;
 }
 
 export default function SetupPage() {
   const { profileId, refreshDomains } = useAppContext();
   const router = useRouter();
   const [drafts, setDrafts] = useState<DraftDomain[]>([
-    { name: "", icon: DOMAIN_ICONS[0], color: DOMAIN_COLORS[0], weeklyTarget: null },
+    { name: "", icon: DOMAIN_ICONS[0], color: DOMAIN_COLORS[0], weeklyTarget: null, targetValue: "", targetUnit: "" },
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,8 @@ export default function SetupPage() {
         icon: DOMAIN_ICONS[prev.length % DOMAIN_ICONS.length],
         color: DOMAIN_COLORS[prev.length % DOMAIN_COLORS.length],
         weeklyTarget: null,
+        targetValue: "",
+        targetUnit: "",
       },
     ]);
   }
@@ -60,6 +64,8 @@ export default function SetupPage() {
           icon: draft.icon,
           color: draft.color,
           weekly_target: draft.weeklyTarget,
+          target_value: draft.targetValue.trim() ? Number(draft.targetValue) : null,
+          target_unit: draft.targetUnit.trim() || null,
         });
       }
       await refreshDomains();
@@ -166,6 +172,25 @@ export default function SetupPage() {
                   ))}
                 </select>
               )}
+            </div>
+
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                step="any"
+                placeholder="Objectif chiffré (optionnel)"
+                value={draft.targetValue}
+                onChange={(e) => updateDraft(index, { targetValue: e.target.value })}
+                className="w-40 rounded-lg border border-border-subtle bg-surface-raised px-2 py-1.5 text-xs outline-none focus:border-accent"
+              />
+              <input
+                type="text"
+                placeholder="Unité (L, pages…)"
+                value={draft.targetUnit}
+                onChange={(e) => updateDraft(index, { targetUnit: e.target.value })}
+                className="flex-1 rounded-lg border border-border-subtle bg-surface-raised px-2 py-1.5 text-xs outline-none focus:border-accent"
+              />
             </div>
           </div>
         ))}

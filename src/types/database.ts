@@ -11,6 +11,9 @@ export interface Domain {
   created_at: string;
   /** Cible hebdomadaire (1-7). Null = suivi quotidien classique. */
   weekly_target: number | null;
+  /** Objectif chiffré quotidien (ex: 2 "L", 20 "pages"). Null = pas d'objectif chiffré. */
+  target_value: number | null;
+  target_unit: string | null;
 }
 
 export interface Checkin {
@@ -22,6 +25,7 @@ export interface Checkin {
   updated_at: string;
   duration_minutes: number | null;
   comment: string | null;
+  value_achieved: number | null;
 }
 
 export interface WeeklyJournalEntry {
