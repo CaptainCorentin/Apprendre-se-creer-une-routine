@@ -13,9 +13,11 @@ const TABS = [
 
 export function NavBar() {
   const pathname = usePathname();
-  const { ready, domains } = useAppContext();
+  const { ready, profileId, domains } = useAppContext();
 
-  if (!ready || domains.length === 0 || pathname === "/setup") return null;
+  if (!ready || !profileId || domains.length === 0 || pathname === "/setup" || pathname === "/profiles") {
+    return null;
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 carbon-panel border-t border-border-subtle">

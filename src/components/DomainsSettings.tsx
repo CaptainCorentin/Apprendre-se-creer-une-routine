@@ -6,7 +6,7 @@ import { createDomain, updateDomain } from "@/lib/data";
 import { DOMAIN_COLORS, DOMAIN_ICONS } from "@/lib/constants";
 
 export function DomainsSettings() {
-  const { domains, refreshDomains } = useAppContext();
+  const { profileId, domains, refreshDomains } = useAppContext();
   const [name, setName] = useState("");
   const [icon, setIcon] = useState(DOMAIN_ICONS[0]);
   const [color, setColor] = useState(DOMAIN_COLORS[0]);
@@ -17,10 +17,10 @@ export function DomainsSettings() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !profileId) return;
     setBusy(true);
     try {
-      await createDomain({ name: name.trim(), icon, color, weekly_target: weeklyTarget });
+      await createDomain({ profileId, name: name.trim(), icon, color, weekly_target: weeklyTarget });
       setName("");
       setWeeklyTarget(null);
       await refreshDomains();

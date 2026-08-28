@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { WeeklyJournalForm } from "@/components/WeeklyJournalForm";
 import { MonthlyJournalForm } from "@/components/MonthlyJournalForm";
+import { useAppContext } from "@/components/AppProvider";
 import { fetchAllMonthlyEntries, fetchAllWeeklyEntries } from "@/lib/data";
 import type { MonthlyJournalEntry, WeeklyJournalEntry } from "@/types/database";
 import { formatMonthFr, formatWeekRangeFr, fromDateKey, getMonthStart, getWeekStart, toDateKey } from "@/lib/date";
@@ -10,6 +11,7 @@ import { formatMonthFr, formatWeekRangeFr, fromDateKey, getMonthStart, getWeekSt
 type Tab = "hebdo" | "mensuel";
 
 export default function JournalPage() {
+  const { profileId } = useAppContext();
   const [tab, setTab] = useState<Tab>("hebdo");
   const [weeklyHistory, setWeeklyHistory] = useState<WeeklyJournalEntry[]>([]);
   const [monthlyHistory, setMonthlyHistory] = useState<MonthlyJournalEntry[]>([]);
@@ -19,9 +21,10 @@ export default function JournalPage() {
   const currentMonthKey = toDateKey(getMonthStart(new Date()));
 
   useEffect(() => {
-    fetchAllWeeklyEntries().then(setWeeklyHistory);
-    fetchAllMonthlyEntries().then(setMonthlyHistory);
-  }, [refreshKey]);
+    if (!profileId) return;
+    fetchAllWeeklyEntries(profileId).then(setWeeklyHistory);
+    fetchAllMonthlyEntries(profileId).then(setMonthlyHistory);
+  }, [profileId, refreshKey]);
 
   return (
     <div className="mx-auto max-w-md px-4 pt-8">

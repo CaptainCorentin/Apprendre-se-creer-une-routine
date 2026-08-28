@@ -5,6 +5,7 @@ import type { MonthlyJournalEntry, WeeklyJournalEntry } from "@/types/database";
 import { fetchMonthlyEntry, fetchWeeklyEntriesInMonth, upsertMonthlyEntry } from "@/lib/data";
 import { formatMonthFr, formatWeekRangeFr, fromDateKey } from "@/lib/date";
 import { MonthlyCheckinRecap } from "./MonthlyCheckinRecap";
+import { useAppContext } from "./AppProvider";
 
 const FIELDS: {
   key: keyof Pick<MonthlyJournalEntry, "domain_trends" | "biggest_learning" | "next_month_intention">;
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function MonthlyJournalForm({ monthStartKey, onSaved, forced }: Props) {
+  const { profileId } = useAppContext();
   const [values, setValues] = useState({
     domain_trends: "",
     biggest_learning: "",
@@ -33,31 +35,34 @@ export function MonthlyJournalForm({ monthStartKey, onSaved, forced }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!profileId) return;
     let cancelled = false;
-    Promise.all([fetchMonthlyEntry(monthStartKey), fetchWeeklyEntriesInMonth(monthStartKey)]).then(
-      ([entry, weeks]) => {
-        if (cancelled) return;
-        if (entry) {
-          setValues({
-            domain_trends: entry.domain_trends,
-            biggest_learning: entry.biggest_learning,
-            next_month_intention: entry.next_month_intention,
-          });
-        }
-        setWeeklyRecap(weeks);
-        setLoading(false);
+    Promise.all([
+      fetchMonthlyEntry(profileId, monthStartKey),
+      fetchWeeklyEntriesInMonth(profileId, monthStartKey),
+    ]).then(([entry, weeks]) => {
+      if (cancelled) return;
+      if (entry) {
+        setValues({
+          domain_trends: entry.domain_trends,
+          biggest_learning: entry.biggest_learning,
+          next_month_intention: entry.next_month_intention,
+        });
       }
-    );
+      setWeeklyRecap(weeks);
+      setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
-  }, [monthStartKey]);
+  }, [profileId, monthStartKey]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!profileId) return;
     setSaving(true);
     try {
-      await upsertMonthlyEntry(monthStartKey, values);
+      await upsertMonthlyEntry(profileId, monthStartKey, values);
       onSaved?.();
     } finally {
       setSaving(false);

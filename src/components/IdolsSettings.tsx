@@ -12,6 +12,7 @@ import {
   uploadIdolPhoto,
 } from "@/lib/data";
 import type { ContextTag, IdolWithQuotes } from "@/types/database";
+import { useAppContext } from "./AppProvider";
 
 const SILHOUETTE =
   "data:image/svg+xml;utf8," +
@@ -27,23 +28,26 @@ const TAG_LABELS: Record<Exclude<ContextTag, null>, string> = {
 };
 
 export function IdolsSettings() {
+  const { profileId } = useAppContext();
   const [idols, setIdols] = useState<IdolWithQuotes[]>([]);
   const [newIdolName, setNewIdolName] = useState("");
   const [busyIdolId, setBusyIdolId] = useState<string | null>(null);
   const [quoteDrafts, setQuoteDrafts] = useState<Record<string, { text: string; tag: ContextTag }>>({});
 
   async function refresh() {
-    setIdols(await fetchIdolsWithQuotes());
+    if (!profileId) return;
+    setIdols(await fetchIdolsWithQuotes(profileId));
   }
 
   useEffect(() => {
-    fetchIdolsWithQuotes().then(setIdols);
-  }, []);
+    if (!profileId) return;
+    fetchIdolsWithQuotes(profileId).then(setIdols);
+  }, [profileId]);
 
   async function handleAddIdol(e: React.FormEvent) {
     e.preventDefault();
-    if (!newIdolName.trim()) return;
-    await createIdol({ name: newIdolName.trim() });
+    if (!newIdolName.trim() || !profileId) return;
+    await createIdol({ profileId, name: newIdolName.trim() });
     setNewIdolName("");
     await refresh();
   }

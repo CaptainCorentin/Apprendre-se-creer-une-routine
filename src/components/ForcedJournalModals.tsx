@@ -18,13 +18,13 @@ import { WEEKLY_REMINDER_WEEKDAY } from "@/lib/constants";
 type Step = "checking" | "weekly" | "monthly" | "done";
 
 export function ForcedJournalModals() {
-  const { ready, domains } = useAppContext();
+  const { ready, profileId, domains } = useAppContext();
   const [step, setStep] = useState<Step>("checking");
   const [weekStartKey, setWeekStartKey] = useState<string | null>(null);
   const [prevMonthStartKey, setPrevMonthStartKey] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!ready || domains.length === 0) return;
+    if (!ready || !profileId || domains.length === 0) return;
 
     async function check() {
       const today = getEffectiveDate();
@@ -35,7 +35,7 @@ export function ForcedJournalModals() {
       let currentWeekKey = "";
       if (isWeeklyReminderDay) {
         currentWeekKey = toDateKey(getWeekStart(today));
-        const entry = await fetchWeeklyEntry(currentWeekKey);
+        const entry = await fetchWeeklyEntry(profileId!, currentWeekKey);
         needsWeekly = !entry;
       }
 
@@ -44,7 +44,7 @@ export function ForcedJournalModals() {
       if (isMonthlyReminderDay) {
         const previousMonthDate = addDays(getMonthStart(today), -1);
         elapsedMonthKey = toDateKey(getMonthStart(previousMonthDate));
-        const entry = await fetchMonthlyEntry(elapsedMonthKey);
+        const entry = await fetchMonthlyEntry(profileId!, elapsedMonthKey);
         needsMonthly = !entry;
       }
 
@@ -61,7 +61,7 @@ export function ForcedJournalModals() {
     }
 
     check();
-  }, [ready, domains.length]);
+  }, [ready, profileId, domains.length]);
 
   if (step === "checking" || step === "done") return null;
 

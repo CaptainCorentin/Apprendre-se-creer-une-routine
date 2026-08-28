@@ -14,7 +14,7 @@ interface DraftDomain {
 }
 
 export default function SetupPage() {
-  const { refreshDomains } = useAppContext();
+  const { profileId, refreshDomains } = useAppContext();
   const router = useRouter();
   const [drafts, setDrafts] = useState<DraftDomain[]>([
     { name: "", icon: DOMAIN_ICONS[0], color: DOMAIN_COLORS[0], weeklyTarget: null },
@@ -49,11 +49,13 @@ export default function SetupPage() {
       setError("Ajoute au moins un domaine pour continuer.");
       return;
     }
+    if (!profileId) return;
     setSubmitting(true);
     setError(null);
     try {
       for (const draft of valid) {
         await createDomain({
+          profileId,
           name: draft.name.trim(),
           icon: draft.icon,
           color: draft.color,

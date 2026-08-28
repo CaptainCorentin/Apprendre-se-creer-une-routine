@@ -5,6 +5,7 @@ import type { WeeklyJournalEntry } from "@/types/database";
 import { fetchWeeklyEntry, upsertWeeklyEntry } from "@/lib/data";
 import { formatWeekRangeFr } from "@/lib/date";
 import { WeeklyCheckinRecap } from "./WeeklyCheckinRecap";
+import { useAppContext } from "./AppProvider";
 
 const FIELDS: { key: keyof Pick<WeeklyJournalEntry, "went_well" | "got_stuck" | "pushed_through" | "process_learning">; label: string; placeholder: string }[] = [
   { key: "went_well", label: "Ce qui a bien marché", placeholder: "Cette semaine, j'ai réussi à…" },
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function WeeklyJournalForm({ weekStartKey, onSaved, forced }: Props) {
+  const { profileId } = useAppContext();
   const [values, setValues] = useState({
     went_well: "",
     got_stuck: "",
@@ -30,8 +32,9 @@ export function WeeklyJournalForm({ weekStartKey, onSaved, forced }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!profileId) return;
     let cancelled = false;
-    fetchWeeklyEntry(weekStartKey).then((entry) => {
+    fetchWeeklyEntry(profileId, weekStartKey).then((entry) => {
       if (cancelled) return;
       if (entry) {
         setValues({
@@ -46,13 +49,14 @@ export function WeeklyJournalForm({ weekStartKey, onSaved, forced }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [weekStartKey]);
+  }, [profileId, weekStartKey]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!profileId) return;
     setSaving(true);
     try {
-      await upsertWeeklyEntry(weekStartKey, values);
+      await upsertWeeklyEntry(profileId, weekStartKey, values);
       onSaved?.();
     } finally {
       setSaving(false);

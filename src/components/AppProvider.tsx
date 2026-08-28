@@ -10,13 +10,17 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import type { Domain } from "@/types/database";
 import { backfillMissedCheckins, fetchDomains } from "@/lib/data";
+import { clearStoredProfileId, getStoredProfileId, listProfiles, storeProfileId } from "@/lib/profiles";
 
 interface AppContextValue {
+  profileId: string | null;
   domains: Domain[];
   activeDomains: Domain[];
   loading: boolean;
   ready: boolean;
   refreshDomains: () => Promise<void>;
+  loginAs: (profileId: string) => void;
+  logout: () => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -28,6 +32,7 @@ export function useAppContext(): AppContextValue {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [profileId, setProfileId] = useState<string | null>(null);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
@@ -35,24 +40,70 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const refreshDomains = useCallback(async () => {
-    const list = await fetchDomains();
+    if (!profileId) return;
+    const list = await fetchDomains(profileId);
     setDomains(list);
-    return;
+  }, [profileId]);
+
+  const logout = useCallback(() => {
+    clearStoredProfileId();
+    setProfileId(null);
+    setDomains([]);
+    router.replace("/profiles");
+  }, [router]);
+
+  const loginAs = useCallback((id: string) => {
+    storeProfileId(id);
+    setProfileId(id);
+  }, []);
+
+  // Résolution du profil courant : aucun profil en base -> bootstrap sur /profiles ;
+  // profil déjà stocké et toujours valide -> on reste connecté ; sinon -> /profiles.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function resolveProfile() {
+      const profiles = await listProfiles();
+      if (cancelled) return;
+
+      if (profiles.length === 0) {
+        setProfileId(null);
+        setLoading(false);
+        setReady(true);
+        return;
+      }
+
+      const stored = getStoredProfileId();
+      if (stored && profiles.some((p) => p.id === stored)) {
+        setProfileId(stored);
+      } else {
+        clearStoredProfileId();
+        setProfileId(null);
+        setLoading(false);
+        setReady(true);
+      }
+    }
+
+    resolveProfile();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
+    if (!profileId) return;
     let cancelled = false;
 
     async function init() {
       setLoading(true);
       try {
-        const list = await fetchDomains();
+        const list = await fetchDomains(profileId!);
         if (cancelled) return;
         setDomains(list);
 
         const active = list.filter((d) => d.active);
         if (active.length > 0) {
-          await backfillMissedCheckins(active);
+          await backfillMissedCheckins(profileId!, active);
         }
       } finally {
         if (!cancelled) {
@@ -66,22 +117,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [profileId]);
 
   useEffect(() => {
     if (!ready) return;
+
+    if (!profileId) {
+      if (pathname !== "/profiles") router.replace("/profiles");
+      return;
+    }
+
+    if (pathname === "/profiles") {
+      router.replace("/");
+      return;
+    }
+
     const hasDomains = domains.length > 0;
     if (!hasDomains && pathname !== "/setup") {
       router.replace("/setup");
     } else if (hasDomains && pathname === "/setup") {
       router.replace("/");
     }
-  }, [ready, domains, pathname, router]);
+  }, [ready, profileId, domains, pathname, router]);
 
   const activeDomains = domains.filter((d) => d.active);
 
   return (
-    <AppContext.Provider value={{ domains, activeDomains, loading, ready, refreshDomains }}>
+    <AppContext.Provider
+      value={{ profileId, domains, activeDomains, loading, ready, refreshDomains, loginAs, logout }}
+    >
       {children}
     </AppContext.Provider>
   );

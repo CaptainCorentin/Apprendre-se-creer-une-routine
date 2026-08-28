@@ -24,7 +24,7 @@ function todayFlag() {
 }
 
 export default function TodayPage() {
-  const { activeDomains, ready } = useAppContext();
+  const { profileId, activeDomains, ready } = useAppContext();
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [idols, setIdols] = useState<IdolWithQuotes[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,18 +32,20 @@ export default function TodayPage() {
   const randomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !profileId) return;
     let cancelled = false;
-    Promise.all([fetchAllCheckins(), fetchIdolsWithQuotes()]).then(([checkinsData, idolsData]) => {
-      if (cancelled) return;
-      setCheckins(checkinsData);
-      setIdols(idolsData);
-      setLoading(false);
-    });
+    Promise.all([fetchAllCheckins(profileId), fetchIdolsWithQuotes(profileId)]).then(
+      ([checkinsData, idolsData]) => {
+        if (cancelled) return;
+        setCheckins(checkinsData);
+        setIdols(idolsData);
+        setLoading(false);
+      }
+    );
     return () => {
       cancelled = true;
     };
-  }, [ready]);
+  }, [ready, profileId]);
 
   // Pop-up aléatoire : une chance par jour maximum, ne se cumule pas avec un moment clé.
   useEffect(() => {
@@ -79,6 +81,7 @@ export default function TodayPage() {
     status: CheckinStatus | "none",
     details?: CheckinEdit
   ) {
+    if (!profileId) return;
     const domain = activeDomains.find((d) => d.id === domainId);
     const domainCheckins = checkins.filter((c) => c.domain_id === domainId);
     const isToday = dateKey === getEffectiveDateKey();
@@ -90,7 +93,7 @@ export default function TodayPage() {
       return;
     }
 
-    const saved = await upsertCheckin(domainId, dateKey, status, {
+    const saved = await upsertCheckin(profileId, domainId, dateKey, status, {
       duration_minutes: details?.duration_minutes ?? existing?.duration_minutes ?? null,
       comment: details?.comment ?? existing?.comment ?? null,
     });

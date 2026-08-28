@@ -15,19 +15,21 @@ import { addDays, getEffectiveDate, toDateKey } from "./date";
 // Domains
 // ============================================================
 
-export async function fetchDomains(): Promise<Domain[]> {
+export async function fetchDomains(profileId: string): Promise<Domain[]> {
   const { data, error } = await supabase
     .from("domains")
     .select("*")
+    .eq("profile_id", profileId)
     .order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchActiveDomains(): Promise<Domain[]> {
+export async function fetchActiveDomains(profileId: string): Promise<Domain[]> {
   const { data, error } = await supabase
     .from("domains")
     .select("*")
+    .eq("profile_id", profileId)
     .eq("active", true)
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -35,6 +37,7 @@ export async function fetchActiveDomains(): Promise<Domain[]> {
 }
 
 export async function createDomain(input: {
+  profileId: string;
   name: string;
   icon: string;
   color: string;
@@ -43,6 +46,7 @@ export async function createDomain(input: {
   const { data, error } = await supabase
     .from("domains")
     .insert({
+      profile_id: input.profileId,
       name: input.name,
       icon: input.icon,
       color: input.color,
@@ -93,8 +97,12 @@ export async function fetchCheckinsSince(domainId: string, sinceDateKey: string)
   return data ?? [];
 }
 
-export async function fetchAllCheckins(): Promise<Checkin[]> {
-  const { data, error } = await supabase.from("checkins").select("*").order("date", { ascending: false });
+export async function fetchAllCheckins(profileId: string): Promise<Checkin[]> {
+  const { data, error } = await supabase
+    .from("checkins")
+    .select("*")
+    .eq("profile_id", profileId)
+    .order("date", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
@@ -118,6 +126,7 @@ export async function fetchCheckinsInRange(
 }
 
 export async function upsertCheckin(
+  profileId: string,
   domainId: string,
   dateKey: string,
   status: CheckinStatus,
@@ -127,6 +136,7 @@ export async function upsertCheckin(
     .from("checkins")
     .upsert(
       {
+        profile_id: profileId,
         domain_id: domainId,
         date: dateKey,
         status,
@@ -157,7 +167,7 @@ export async function deleteCheckin(domainId: string, dateKey: string): Promise<
  * auto-marqués : un jour sans checkin y est normal, seule la cible de la
  * semaine compte.
  */
-export async function backfillMissedCheckins(domains: Domain[]): Promise<void> {
+export async function backfillMissedCheckins(profileId: string, domains: Domain[]): Promise<void> {
   const todayKey = toDateKey(getEffectiveDate());
 
   for (const domain of domains) {
@@ -185,6 +195,7 @@ export async function backfillMissedCheckins(domains: Domain[]): Promise<void> {
     if (missingKeys.length === 0) continue;
 
     const rows = missingKeys.map((date) => ({
+      profile_id: profileId,
       domain_id: domain.id,
       date,
       status: "missed" as CheckinStatus,
@@ -199,32 +210,38 @@ export async function backfillMissedCheckins(domains: Domain[]): Promise<void> {
 // Weekly journal
 // ============================================================
 
-export async function fetchWeeklyEntry(weekStartKey: string): Promise<WeeklyJournalEntry | null> {
+export async function fetchWeeklyEntry(profileId: string, weekStartKey: string): Promise<WeeklyJournalEntry | null> {
   const { data, error } = await supabase
     .from("weekly_journal_entries")
     .select("*")
+    .eq("profile_id", profileId)
     .eq("week_start_date", weekStartKey)
     .maybeSingle();
   if (error) throw error;
   return data;
 }
 
-export async function fetchAllWeeklyEntries(): Promise<WeeklyJournalEntry[]> {
+export async function fetchAllWeeklyEntries(profileId: string): Promise<WeeklyJournalEntry[]> {
   const { data, error } = await supabase
     .from("weekly_journal_entries")
     .select("*")
+    .eq("profile_id", profileId)
     .order("week_start_date", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
 
 export async function upsertWeeklyEntry(
+  profileId: string,
   weekStartKey: string,
   fields: Pick<WeeklyJournalEntry, "went_well" | "got_stuck" | "pushed_through" | "process_learning">
 ): Promise<WeeklyJournalEntry> {
   const { data, error } = await supabase
     .from("weekly_journal_entries")
-    .upsert({ week_start_date: weekStartKey, ...fields }, { onConflict: "week_start_date" })
+    .upsert(
+      { profile_id: profileId, week_start_date: weekStartKey, ...fields },
+      { onConflict: "profile_id,week_start_date" }
+    )
     .select()
     .single();
   if (error) throw error;
@@ -235,44 +252,57 @@ export async function upsertWeeklyEntry(
 // Monthly journal
 // ============================================================
 
-export async function fetchMonthlyEntry(monthStartKey: string): Promise<MonthlyJournalEntry | null> {
+export async function fetchMonthlyEntry(
+  profileId: string,
+  monthStartKey: string
+): Promise<MonthlyJournalEntry | null> {
   const { data, error } = await supabase
     .from("monthly_journal_entries")
     .select("*")
+    .eq("profile_id", profileId)
     .eq("month_start_date", monthStartKey)
     .maybeSingle();
   if (error) throw error;
   return data;
 }
 
-export async function fetchAllMonthlyEntries(): Promise<MonthlyJournalEntry[]> {
+export async function fetchAllMonthlyEntries(profileId: string): Promise<MonthlyJournalEntry[]> {
   const { data, error } = await supabase
     .from("monthly_journal_entries")
     .select("*")
+    .eq("profile_id", profileId)
     .order("month_start_date", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
 
 export async function upsertMonthlyEntry(
+  profileId: string,
   monthStartKey: string,
   fields: Pick<MonthlyJournalEntry, "domain_trends" | "biggest_learning" | "next_month_intention">
 ): Promise<MonthlyJournalEntry> {
   const { data, error } = await supabase
     .from("monthly_journal_entries")
-    .upsert({ month_start_date: monthStartKey, ...fields }, { onConflict: "month_start_date" })
+    .upsert(
+      { profile_id: profileId, month_start_date: monthStartKey, ...fields },
+      { onConflict: "profile_id,month_start_date" }
+    )
     .select()
     .single();
   if (error) throw error;
   return data;
 }
 
-export async function fetchWeeklyEntriesInMonth(monthStartKey: string): Promise<WeeklyJournalEntry[]> {
+export async function fetchWeeklyEntriesInMonth(
+  profileId: string,
+  monthStartKey: string
+): Promise<WeeklyJournalEntry[]> {
   const start = new Date(monthStartKey);
   const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
   const { data, error } = await supabase
     .from("weekly_journal_entries")
     .select("*")
+    .eq("profile_id", profileId)
     .gte("week_start_date", monthStartKey)
     .lt("week_start_date", toDateKey(end))
     .order("week_start_date", { ascending: true });
@@ -284,26 +314,33 @@ export async function fetchWeeklyEntriesInMonth(monthStartKey: string): Promise<
 // Idols & quotes
 // ============================================================
 
-export async function fetchIdolsWithQuotes(): Promise<IdolWithQuotes[]> {
+export async function fetchIdolsWithQuotes(profileId: string): Promise<IdolWithQuotes[]> {
   const { data, error } = await supabase
     .from("idols")
     .select("*, idol_quotes(*)")
+    .eq("profile_id", profileId)
     .order("display_order", { ascending: true });
   if (error) throw error;
   return (data as IdolWithQuotes[]) ?? [];
 }
 
-export async function createIdol(input: { name: string; photo_url?: string | null }) {
+export async function createIdol(input: { profileId: string; name: string; photo_url?: string | null }) {
   const { data: existing } = await supabase
     .from("idols")
     .select("display_order")
+    .eq("profile_id", input.profileId)
     .order("display_order", { ascending: false })
     .limit(1);
   const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 0;
 
   const { data, error } = await supabase
     .from("idols")
-    .insert({ name: input.name, photo_url: input.photo_url ?? null, display_order: nextOrder })
+    .insert({
+      profile_id: input.profileId,
+      name: input.name,
+      photo_url: input.photo_url ?? null,
+      display_order: nextOrder,
+    })
     .select()
     .single();
   if (error) throw error;
