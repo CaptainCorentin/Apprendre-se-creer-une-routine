@@ -18,6 +18,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Routine — Growth Mindset",
   description: "Suivi de routine personnelle et journal de growth mindset",
+  appleWebApp: {
+    title: "Routine",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
