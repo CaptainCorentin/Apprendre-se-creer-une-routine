@@ -17,27 +17,46 @@ export default function JournalPage() {
   const [weeklyHistory, setWeeklyHistory] = useState<WeeklyJournalEntry[]>([]);
   const [monthlyHistory, setMonthlyHistory] = useState<MonthlyJournalEntry[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [weekKey, setWeekKey] = useState(() => toDateKey(getWeekStart(new Date())));
-  const [monthKey, setMonthKey] = useState(() => toDateKey(getMonthStart(new Date())));
+  const [dueWeekKey, setDueWeekKey] = useState(() => toDateKey(getWeekStart(new Date())));
+  const [dueMonthKey, setDueMonthKey] = useState(() => toDateKey(getMonthStart(new Date())));
+  const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
+
+  const weekKey = selectedWeekKey ?? dueWeekKey;
+  const monthKey = selectedMonthKey ?? dueMonthKey;
 
   useEffect(() => {
     if (!profileId) return;
     fetchAllWeeklyEntries(profileId).then(setWeeklyHistory);
     fetchAllMonthlyEntries(profileId).then(setMonthlyHistory);
     checkJournalDue(profileId).then((status) => {
-      setWeekKey(status.weekly ? status.weekKey : toDateKey(getWeekStart(new Date())));
+      setDueWeekKey(status.weekly ? status.weekKey : toDateKey(getWeekStart(new Date())));
       if (status.monthly && status.monthKey) {
-        setMonthKey(status.monthKey);
+        setDueMonthKey(status.monthKey);
         setTab((current) => (current === "hebdo" && !status.weekly ? "mensuel" : current));
       } else {
-        setMonthKey(toDateKey(getMonthStart(new Date())));
+        setDueMonthKey(toDateKey(getMonthStart(new Date())));
       }
     });
   }, [profileId, refreshKey]);
 
   function handleSaved() {
+    setSelectedWeekKey(null);
+    setSelectedMonthKey(null);
     setRefreshKey((k) => k + 1);
     refreshJournalDue();
+  }
+
+  function editWeek(key: string) {
+    setSelectedWeekKey(key);
+    setTab("hebdo");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function editMonth(key: string) {
+    setSelectedMonthKey(key);
+    setTab("mensuel");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
@@ -66,9 +85,33 @@ export default function JournalPage() {
 
       <div className="mt-5 carbon-panel rounded-2xl p-4">
         {tab === "hebdo" ? (
-          <WeeklyJournalForm key={`week-${weekKey}-${refreshKey}`} weekStartKey={weekKey} onSaved={handleSaved} />
+          <>
+            {selectedWeekKey && selectedWeekKey !== dueWeekKey && (
+              <button
+                onClick={() => setSelectedWeekKey(null)}
+                className="mb-3 text-xs text-foreground-muted underline decoration-dotted underline-offset-2 hover:text-accent-strong"
+              >
+                ← Revenir à la semaine en cours
+              </button>
+            )}
+            <WeeklyJournalForm key={`week-${weekKey}-${refreshKey}`} weekStartKey={weekKey} onSaved={handleSaved} />
+          </>
         ) : (
-          <MonthlyJournalForm key={`month-${monthKey}-${refreshKey}`} monthStartKey={monthKey} onSaved={handleSaved} />
+          <>
+            {selectedMonthKey && selectedMonthKey !== dueMonthKey && (
+              <button
+                onClick={() => setSelectedMonthKey(null)}
+                className="mb-3 text-xs text-foreground-muted underline decoration-dotted underline-offset-2 hover:text-accent-strong"
+              >
+                ← Revenir au mois en cours
+              </button>
+            )}
+            <MonthlyJournalForm
+              key={`month-${monthKey}-${refreshKey}`}
+              monthStartKey={monthKey}
+              onSaved={handleSaved}
+            />
+          </>
         )}
       </div>
 
@@ -83,15 +126,22 @@ export default function JournalPage() {
               <p className="text-sm text-foreground-muted">Aucune entrée pour le moment.</p>
             )}
             {weeklyHistory.map((entry) => (
-              <div key={entry.id} className="carbon-panel rounded-xl p-3 text-sm">
-                <p className="font-medium text-accent-strong">
-                  Semaine du {formatWeekRangeFr(entry.week_start_date)}
-                </p>
+              <button
+                key={entry.id}
+                onClick={() => editWeek(entry.week_start_date)}
+                className="carbon-panel block w-full rounded-xl p-3 text-left text-sm transition hover:border-accent/50"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-accent-strong">
+                    Semaine du {formatWeekRangeFr(entry.week_start_date)}
+                  </p>
+                  <span className="text-[11px] text-foreground-muted">Modifier</span>
+                </div>
                 <p className="mt-1 text-foreground-muted">✅ {entry.went_well}</p>
                 <p className="text-foreground-muted">🧗 {entry.got_stuck}</p>
                 <p className="text-foreground-muted">💪 {entry.pushed_through}</p>
                 <p className="text-foreground-muted">📚 {entry.process_learning}</p>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -102,14 +152,21 @@ export default function JournalPage() {
               <p className="text-sm text-foreground-muted">Aucune entrée pour le moment.</p>
             )}
             {monthlyHistory.map((entry) => (
-              <div key={entry.id} className="carbon-panel rounded-xl p-3 text-sm">
-                <p className="font-medium capitalize text-accent-strong">
-                  {formatMonthFr(fromDateKey(entry.month_start_date))}
-                </p>
+              <button
+                key={entry.id}
+                onClick={() => editMonth(entry.month_start_date)}
+                className="carbon-panel block w-full rounded-xl p-3 text-left text-sm transition hover:border-accent/50"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-medium capitalize text-accent-strong">
+                    {formatMonthFr(fromDateKey(entry.month_start_date))}
+                  </p>
+                  <span className="text-[11px] text-foreground-muted">Modifier</span>
+                </div>
                 <p className="mt-1 text-foreground-muted">📈 {entry.domain_trends}</p>
                 <p className="text-foreground-muted">💡 {entry.biggest_learning}</p>
                 <p className="text-foreground-muted">🎯 {entry.next_month_intention}</p>
-              </div>
+              </button>
             ))}
           </div>
         )}
