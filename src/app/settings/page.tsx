@@ -1,6 +1,7 @@
 import { DomainsSettings } from "@/components/DomainsSettings";
 import { IdolsSettings } from "@/components/IdolsSettings";
 import { ProfilesSettings } from "@/components/ProfilesSettings";
+import { ExportData } from "@/components/ExportData";
 
 export default function SettingsPage() {
   return (
@@ -15,6 +16,7 @@ export default function SettingsPage() {
       </div>
 
       <IdolsSettings />
+      <ExportData />
       <ProfilesSettings />
     </div>
   );

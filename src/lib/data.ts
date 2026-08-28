@@ -113,6 +113,21 @@ export async function fetchAllCheckins(profileId: string): Promise<Checkin[]> {
   return data ?? [];
 }
 
+export interface CheckinExportRow extends Checkin {
+  domains: { name: string } | null;
+}
+
+/** Tous les checkins du profil avec le nom du domaine, pour export (CSV). */
+export async function fetchCheckinsForExport(profileId: string): Promise<CheckinExportRow[]> {
+  const { data, error } = await supabase
+    .from("checkins")
+    .select("*, domains(name)")
+    .eq("profile_id", profileId)
+    .order("date", { ascending: true });
+  if (error) throw error;
+  return (data as CheckinExportRow[]) ?? [];
+}
+
 /** Récupère les checkins de plusieurs domaines sur une plage de dates (bornes incluses). */
 export async function fetchCheckinsInRange(
   domainIds: string[],
