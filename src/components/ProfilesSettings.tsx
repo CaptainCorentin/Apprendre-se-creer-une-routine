@@ -7,6 +7,7 @@ import {
   listProfiles,
   setAcceptsPiquant,
   setProfilePassword,
+  setShowsMondayRecap,
   type ProfileSummary,
 } from "@/lib/profiles";
 
@@ -33,6 +34,14 @@ export function ProfilesSettings() {
     await setAcceptsPiquant(profileId, value);
     setProfiles(await listProfiles());
   }
+
+  async function toggleShowsMondayRecap(value: boolean) {
+    if (!profileId) return;
+    await setShowsMondayRecap(profileId, value);
+    setProfiles(await listProfiles());
+  }
+
+  const me = profiles.find((p) => p.id === profileId);
 
   async function handleAddProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -161,15 +170,37 @@ export function ProfilesSettings() {
           </p>
         </div>
         <button
-          onClick={() => toggleAcceptsPiquant(!(profiles.find((p) => p.id === profileId)?.accepts_piquant ?? true))}
+          onClick={() => toggleAcceptsPiquant(!(me?.accepts_piquant ?? true))}
           className={`h-6 w-11 shrink-0 rounded-full transition ${
-            profiles.find((p) => p.id === profileId)?.accepts_piquant ? "bg-accent" : "bg-surface-raised"
+            me?.accepts_piquant ? "bg-accent" : "bg-surface-raised"
           }`}
           aria-label="Recevoir des piques"
         >
           <span
             className={`block h-5 w-5 translate-y-0.5 rounded-full bg-white transition ${
-              profiles.find((p) => p.id === profileId)?.accepts_piquant ? "translate-x-5" : "translate-x-0.5"
+              me?.accepts_piquant ? "translate-x-5" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+      </div>
+
+      <div className="carbon-panel mt-3 flex items-center justify-between rounded-xl p-3">
+        <div>
+          <p className="text-xs font-medium">Récap du lundi (Entre nous)</p>
+          <p className="mt-0.5 text-[11px] text-foreground-muted">
+            Pop-up avec le résumé de la semaine des autres, à l&apos;ouverture le lundi.
+          </p>
+        </div>
+        <button
+          onClick={() => toggleShowsMondayRecap(!(me?.shows_monday_recap ?? true))}
+          className={`h-6 w-11 shrink-0 rounded-full transition ${
+            me?.shows_monday_recap ? "bg-accent" : "bg-surface-raised"
+          }`}
+          aria-label="Afficher le récap du lundi"
+        >
+          <span
+            className={`block h-5 w-5 translate-y-0.5 rounded-full bg-white transition ${
+              me?.shows_monday_recap ? "translate-x-5" : "translate-x-0.5"
             }`}
           />
         </button>

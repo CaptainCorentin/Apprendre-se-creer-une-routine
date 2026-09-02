@@ -2,12 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAppContext } from "@/components/AppProvider";
-import {
-  fetchReceivedMessages,
-  fetchWeeklySummaries,
-  markMessagesRead,
-  sendGroupMessage,
-} from "@/lib/groupMessages";
+import { MessageComposer } from "@/components/MessageComposer";
+import { fetchReceivedMessages, fetchWeeklySummaries, markMessagesRead } from "@/lib/groupMessages";
 import type { GroupMessage, MessageKind, ProfileWeekSummary } from "@/types/database";
 import { formatWeekRangeFr, getWeekStart, toDateKey } from "@/lib/date";
 import { listProfiles } from "@/lib/profiles";
@@ -22,13 +18,11 @@ export default function EntreNousPage() {
   const [summaries, setSummaries] = useState<ProfileWeekSummary[] | null>(null);
   const [messages, setMessages] = useState<GroupMessage[]>([]);
   const [profileNames, setProfileNames] = useState<Record<string, string>>({});
-  const [composer, setComposer] = useState<{ profileId: string; name: string; acceptsPiquant: boolean } | null>(
-    null
-  );
-  const [kind, setKind] = useState<MessageKind>("encouragement");
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
+  const [composerTarget, setComposerTarget] = useState<{
+    profileId: string;
+    name: string;
+    acceptsPiquant: boolean;
+  } | null>(null);
 
   const weekKey = toDateKey(getWeekStart(new Date()));
 
@@ -41,29 +35,6 @@ export default function EntreNousPage() {
     });
     markMessagesRead(profileId).then(refreshUnreadMessages);
   }, [profileId, weekKey, refreshUnreadMessages]);
-
-  async function handleSend() {
-    if (!profileId || !composer || !text.trim()) return;
-    setSending(true);
-    setSendError(null);
-    try {
-      await sendGroupMessage({
-        fromProfileId: profileId,
-        toProfileId: composer.profileId,
-        weekStartKey: weekKey,
-        kind,
-        message: text.trim(),
-      });
-      setComposer(null);
-      setText("");
-      setKind("encouragement");
-    } catch (err) {
-      setSendError("Ce profil n'accepte pas les piques. Essaie un encouragement.");
-      console.error(err);
-    } finally {
-      setSending(false);
-    }
-  }
 
   return (
     <div className="mx-auto max-w-md px-4 pt-8">
@@ -107,7 +78,7 @@ export default function EntreNousPage() {
               </div>
               <button
                 onClick={() =>
-                  setComposer({
+                  setComposerTarget({
                     profileId: summary.profileId,
                     name: summary.profileName,
                     acceptsPiquant: summary.acceptsPiquant,
@@ -124,64 +95,15 @@ export default function EntreNousPage() {
         )}
       </div>
 
-      {composer && (
+      {composerTarget && profileId && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-          <div className="modal-in carbon-panel w-full max-w-sm rounded-2xl p-5">
-            <p className="text-sm font-semibold">À {composer.name}</p>
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={() => setKind("encouragement")}
-                className={`flex-1 rounded-lg py-2 text-xs font-medium transition ${
-                  kind === "encouragement" ? "bg-accent text-white" : "bg-surface-raised text-foreground-muted"
-                }`}
-              >
-                👏 Encouragement
-              </button>
-              {composer.acceptsPiquant && (
-                <button
-                  onClick={() => setKind("piquant")}
-                  className={`flex-1 rounded-lg py-2 text-xs font-medium transition ${
-                    kind === "piquant" ? "bg-accent text-white" : "bg-surface-raised text-foreground-muted"
-                  }`}
-                >
-                  😈 Pique
-                </button>
-              )}
-            </div>
-            {!composer.acceptsPiquant && (
-              <p className="mt-1 text-[11px] text-foreground-muted">
-                {composer.name} n&apos;accepte que les encouragements.
-              </p>
-            )}
-            {sendError && <p className="mt-2 text-xs text-accent-strong">{sendError}</p>}
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Ton message…"
-              rows={3}
-              autoFocus
-              className="mt-3 w-full rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-sm outline-none focus:border-accent"
-            />
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={handleSend}
-                disabled={sending || !text.trim()}
-                className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
-              >
-                {sending ? "Envoi…" : "Envoyer"}
-              </button>
-              <button
-                onClick={() => {
-                  setComposer(null);
-                  setText("");
-                  setSendError(null);
-                }}
-                className="rounded-xl border border-border-subtle px-4 py-2.5 text-sm text-foreground-muted"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
+          <MessageComposer
+            fromProfileId={profileId}
+            target={composerTarget}
+            weekStartKey={weekKey}
+            onSent={() => setComposerTarget(null)}
+            onCancel={() => setComposerTarget(null)}
+          />
         </div>
       )}
 

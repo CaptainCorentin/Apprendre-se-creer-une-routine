@@ -4,6 +4,7 @@ export interface ProfileSummary {
   id: string;
   name: string;
   accepts_piquant: boolean;
+  shows_monday_recap: boolean;
 }
 
 export async function listProfiles(): Promise<ProfileSummary[]> {
@@ -14,6 +15,11 @@ export async function listProfiles(): Promise<ProfileSummary[]> {
 
 export async function setAcceptsPiquant(profileId: string, value: boolean): Promise<void> {
   const { error } = await supabase.rpc("set_accepts_piquant", { p_profile_id: profileId, p_value: value });
+  if (error) throw error;
+}
+
+export async function setShowsMondayRecap(profileId: string, value: boolean): Promise<void> {
+  const { error } = await supabase.rpc("set_shows_monday_recap", { p_profile_id: profileId, p_value: value });
   if (error) throw error;
 }
 

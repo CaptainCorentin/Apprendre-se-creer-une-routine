@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppProvider } from "@/components/AppProvider";
 import { NavBar } from "@/components/NavBar";
 import { ForcedJournalModals } from "@/components/ForcedJournalModals";
+import { MondayRecapModal } from "@/components/MondayRecapModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <main className="flex-1 pb-24">{children}</main>
           <NavBar />
           <ForcedJournalModals />
+          <MondayRecapModal />
         </AppProvider>
       </body>
     </html>
