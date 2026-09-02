@@ -336,21 +336,22 @@ export async function fetchWeeklyEntriesInMonth(
 // Idols & quotes
 // ============================================================
 
-export async function fetchIdolsWithQuotes(profileId: string): Promise<IdolWithQuotes[]> {
+// Le Hall of Fame (idoles + citations) est partagé entre tous les profils :
+// pas de filtre par profil_id ici.
+
+export async function fetchIdolsWithQuotes(): Promise<IdolWithQuotes[]> {
   const { data, error } = await supabase
     .from("idols")
     .select("*, idol_quotes(*)")
-    .eq("profile_id", profileId)
     .order("display_order", { ascending: true });
   if (error) throw error;
   return (data as IdolWithQuotes[]) ?? [];
 }
 
-export async function createIdol(input: { profileId: string; name: string; photo_url?: string | null }) {
+export async function createIdol(input: { name: string; photo_url?: string | null }) {
   const { data: existing } = await supabase
     .from("idols")
     .select("display_order")
-    .eq("profile_id", input.profileId)
     .order("display_order", { ascending: false })
     .limit(1);
   const nextOrder = existing && existing.length > 0 ? existing[0].display_order + 1 : 0;
@@ -358,7 +359,6 @@ export async function createIdol(input: { profileId: string; name: string; photo
   const { data, error } = await supabase
     .from("idols")
     .insert({
-      profile_id: input.profileId,
       name: input.name,
       photo_url: input.photo_url ?? null,
       display_order: nextOrder,

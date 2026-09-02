@@ -34,7 +34,7 @@ export default function TodayPage() {
   useEffect(() => {
     if (!ready || !profileId) return;
     let cancelled = false;
-    Promise.all([fetchAllCheckins(profileId), fetchIdolsWithQuotes(profileId)]).then(
+    Promise.all([fetchAllCheckins(profileId), fetchIdolsWithQuotes()]).then(
       ([checkinsData, idolsData]) => {
         if (cancelled) return;
         setCheckins(checkinsData);

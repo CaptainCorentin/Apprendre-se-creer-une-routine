@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { fetchIdolsWithQuotes } from "@/lib/data";
 import type { IdolWithQuotes } from "@/types/database";
-import { useAppContext } from "@/components/AppProvider";
 
 const SILHOUETTE =
   "data:image/svg+xml;utf8," +
@@ -13,16 +12,14 @@ const SILHOUETTE =
   );
 
 export default function HallOfFamePage() {
-  const { profileId } = useAppContext();
   const [idols, setIdols] = useState<IdolWithQuotes[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!profileId) return;
-    fetchIdolsWithQuotes(profileId)
+    fetchIdolsWithQuotes()
       .then(setIdols)
       .finally(() => setLoading(false));
-  }, [profileId]);
+  }, []);
 
   return (
     <div className="mx-auto max-w-md px-4 pt-8">

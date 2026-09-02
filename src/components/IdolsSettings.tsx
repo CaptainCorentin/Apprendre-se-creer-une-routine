@@ -12,7 +12,6 @@ import {
   uploadIdolPhoto,
 } from "@/lib/data";
 import type { ContextTag, IdolWithQuotes } from "@/types/database";
-import { useAppContext } from "./AppProvider";
 
 const SILHOUETTE =
   "data:image/svg+xml;utf8," +
@@ -28,26 +27,23 @@ const TAG_LABELS: Record<Exclude<ContextTag, null>, string> = {
 };
 
 export function IdolsSettings() {
-  const { profileId } = useAppContext();
   const [idols, setIdols] = useState<IdolWithQuotes[]>([]);
   const [newIdolName, setNewIdolName] = useState("");
   const [busyIdolId, setBusyIdolId] = useState<string | null>(null);
   const [quoteDrafts, setQuoteDrafts] = useState<Record<string, { text: string; tag: ContextTag }>>({});
 
   async function refresh() {
-    if (!profileId) return;
-    setIdols(await fetchIdolsWithQuotes(profileId));
+    setIdols(await fetchIdolsWithQuotes());
   }
 
   useEffect(() => {
-    if (!profileId) return;
-    fetchIdolsWithQuotes(profileId).then(setIdols);
-  }, [profileId]);
+    fetchIdolsWithQuotes().then(setIdols);
+  }, []);
 
   async function handleAddIdol(e: React.FormEvent) {
     e.preventDefault();
-    if (!newIdolName.trim() || !profileId) return;
-    await createIdol({ profileId, name: newIdolName.trim() });
+    if (!newIdolName.trim()) return;
+    await createIdol({ name: newIdolName.trim() });
     setNewIdolName("");
     await refresh();
   }
@@ -85,6 +81,10 @@ export function IdolsSettings() {
   return (
     <section className="mt-8">
       <h2 className="text-sm font-semibold text-foreground-muted">Idoles</h2>
+      <p className="mt-1 text-xs text-foreground-muted">
+        Le Hall of Fame est partagé entre tous les profils : une photo ou une idole ajoutée ici est visible
+        de tout le monde.
+      </p>
 
       <div className="mt-3 space-y-4">
         {idols.map((idol) => {
