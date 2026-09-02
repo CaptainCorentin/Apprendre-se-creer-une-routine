@@ -3,12 +3,18 @@ import { supabase } from "./supabase";
 export interface ProfileSummary {
   id: string;
   name: string;
+  accepts_piquant: boolean;
 }
 
 export async function listProfiles(): Promise<ProfileSummary[]> {
   const { data, error } = await supabase.rpc("list_profiles");
   if (error) throw error;
   return data ?? [];
+}
+
+export async function setAcceptsPiquant(profileId: string, value: boolean): Promise<void> {
+  const { error } = await supabase.rpc("set_accepts_piquant", { p_profile_id: profileId, p_value: value });
+  if (error) throw error;
 }
 
 export async function createProfile(name: string, password: string): Promise<string> {

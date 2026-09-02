@@ -22,10 +22,13 @@ export default function EntreNousPage() {
   const [summaries, setSummaries] = useState<ProfileWeekSummary[] | null>(null);
   const [messages, setMessages] = useState<GroupMessage[]>([]);
   const [profileNames, setProfileNames] = useState<Record<string, string>>({});
-  const [composer, setComposer] = useState<{ profileId: string; name: string } | null>(null);
+  const [composer, setComposer] = useState<{ profileId: string; name: string; acceptsPiquant: boolean } | null>(
+    null
+  );
   const [kind, setKind] = useState<MessageKind>("encouragement");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const weekKey = toDateKey(getWeekStart(new Date()));
 
@@ -42,6 +45,7 @@ export default function EntreNousPage() {
   async function handleSend() {
     if (!profileId || !composer || !text.trim()) return;
     setSending(true);
+    setSendError(null);
     try {
       await sendGroupMessage({
         fromProfileId: profileId,
@@ -53,6 +57,9 @@ export default function EntreNousPage() {
       setComposer(null);
       setText("");
       setKind("encouragement");
+    } catch (err) {
+      setSendError("Ce profil n'accepte pas les piques. Essaie un encouragement.");
+      console.error(err);
     } finally {
       setSending(false);
     }
@@ -99,7 +106,13 @@ export default function EntreNousPage() {
                 ))}
               </div>
               <button
-                onClick={() => setComposer({ profileId: summary.profileId, name: summary.profileName })}
+                onClick={() =>
+                  setComposer({
+                    profileId: summary.profileId,
+                    name: summary.profileName,
+                    acceptsPiquant: summary.acceptsPiquant,
+                  })
+                }
                 className="mt-3 w-full rounded-lg border border-border-subtle py-2 text-xs font-medium text-foreground-muted hover:border-accent hover:text-accent-strong"
               >
                 Envoyer un message
@@ -124,15 +137,23 @@ export default function EntreNousPage() {
               >
                 👏 Encouragement
               </button>
-              <button
-                onClick={() => setKind("piquant")}
-                className={`flex-1 rounded-lg py-2 text-xs font-medium transition ${
-                  kind === "piquant" ? "bg-accent text-white" : "bg-surface-raised text-foreground-muted"
-                }`}
-              >
-                😈 Pique
-              </button>
+              {composer.acceptsPiquant && (
+                <button
+                  onClick={() => setKind("piquant")}
+                  className={`flex-1 rounded-lg py-2 text-xs font-medium transition ${
+                    kind === "piquant" ? "bg-accent text-white" : "bg-surface-raised text-foreground-muted"
+                  }`}
+                >
+                  😈 Pique
+                </button>
+              )}
             </div>
+            {!composer.acceptsPiquant && (
+              <p className="mt-1 text-[11px] text-foreground-muted">
+                {composer.name} n&apos;accepte que les encouragements.
+              </p>
+            )}
+            {sendError && <p className="mt-2 text-xs text-accent-strong">{sendError}</p>}
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -153,6 +174,7 @@ export default function EntreNousPage() {
                 onClick={() => {
                   setComposer(null);
                   setText("");
+                  setSendError(null);
                 }}
                 className="rounded-xl border border-border-subtle px-4 py-2.5 text-sm text-foreground-muted"
               >
