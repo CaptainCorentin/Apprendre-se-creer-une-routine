@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAppContext } from "@/components/AppProvider";
+import { Avatar } from "@/components/Avatar";
 import { MessageComposer } from "@/components/MessageComposer";
 import { fetchReceivedMessages, fetchWeeklySummaries, markMessagesRead } from "@/lib/groupMessages";
 import type { GroupMessage, MessageKind, ProfileWeekSummary } from "@/types/database";
@@ -18,6 +19,7 @@ export default function EntreNousPage() {
   const [summaries, setSummaries] = useState<ProfileWeekSummary[] | null>(null);
   const [messages, setMessages] = useState<GroupMessage[]>([]);
   const [profileNames, setProfileNames] = useState<Record<string, string>>({});
+  const [profilePhotos, setProfilePhotos] = useState<Record<string, string | null>>({});
   const [composerTarget, setComposerTarget] = useState<{
     profileId: string;
     name: string;
@@ -32,6 +34,7 @@ export default function EntreNousPage() {
     fetchReceivedMessages(profileId).then(setMessages);
     listProfiles().then((list) => {
       setProfileNames(Object.fromEntries(list.map((p) => [p.id, p.name])));
+      setProfilePhotos(Object.fromEntries(list.map((p) => [p.id, p.photo_url])));
     });
     markMessagesRead(profileId).then(refreshUnreadMessages);
   }, [profileId, weekKey, refreshUnreadMessages]);
@@ -49,7 +52,10 @@ export default function EntreNousPage() {
           ?.filter((s) => s.profileId !== profileId)
           .map((summary) => (
             <div key={summary.profileId} className="carbon-panel rounded-2xl p-4">
-              <h2 className="font-semibold">{summary.profileName}</h2>
+              <div className="flex items-center gap-2">
+                <Avatar name={summary.profileName} photoUrl={summary.profilePhotoUrl} size={32} />
+                <h2 className="font-semibold">{summary.profileName}</h2>
+              </div>
               <div className="mt-3 space-y-2">
                 {!summary.hasActivity && (
                   <p className="text-xs text-foreground-muted">Pas d&apos;imputations cette semaine.</p>
@@ -118,9 +124,16 @@ export default function EntreNousPage() {
           {messages.map((m) => (
             <div key={m.id} className="carbon-panel rounded-xl p-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-accent-strong">
-                  {profileNames[m.from_profile_id] ?? "Quelqu'un"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Avatar
+                    name={profileNames[m.from_profile_id] ?? "?"}
+                    photoUrl={profilePhotos[m.from_profile_id]}
+                    size={22}
+                  />
+                  <span className="font-medium text-accent-strong">
+                    {profileNames[m.from_profile_id] ?? "Quelqu'un"}
+                  </span>
+                </div>
                 <span className="text-[11px] text-foreground-muted">{KIND_LABEL[m.kind]}</span>
               </div>
               <p className="mt-1 text-foreground-muted">{m.message}</p>

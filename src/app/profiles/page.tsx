@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppContext } from "@/components/AppProvider";
-import { createProfile, listProfiles, verifyProfilePassword, type ProfileSummary } from "@/lib/profiles";
+import { Avatar } from "@/components/Avatar";
+import {
+  createProfile,
+  listProfiles,
+  setProfilePhoto,
+  uploadProfilePhoto,
+  verifyProfilePassword,
+  type ProfileSummary,
+} from "@/lib/profiles";
 
 export default function ProfilesPage() {
   const { loginAs } = useAppContext();
@@ -12,6 +20,7 @@ export default function ProfilesPage() {
   const [selectedId, setSelectedId] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -53,6 +62,10 @@ export default function ProfilesPage() {
     setError(null);
     try {
       const id = await createProfile(name.trim(), password);
+      if (photo) {
+        const url = await uploadProfilePhoto(id, photo);
+        await setProfilePhoto(id, url);
+      }
       loginAs(id);
       router.replace("/");
     } catch (err) {
@@ -103,6 +116,15 @@ export default function ProfilesPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-sm outline-none focus:border-accent"
           />
+          <label className="block text-xs text-foreground-muted">
+            Photo de profil (optionnel)
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+              className="mt-1 block w-full text-xs text-foreground-muted file:mr-2 file:rounded-lg file:border-0 file:bg-surface-raised file:px-3 file:py-1.5 file:text-xs file:text-foreground-muted"
+            />
+          </label>
           {error && <p className="text-sm text-accent-strong">{error}</p>}
           <button
             type="submit"
@@ -114,17 +136,21 @@ export default function ProfilesPage() {
         </form>
       ) : (
         <form onSubmit={handleLogin} className="carbon-panel space-y-3 rounded-2xl p-4">
-          <select
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-            className="w-full rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-sm outline-none focus:border-accent"
-          >
+          <div className="flex flex-wrap justify-center gap-3">
             {profiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setSelectedId(p.id)}
+                className={`flex flex-col items-center gap-1.5 rounded-xl px-2 py-2 transition ${
+                  selectedId === p.id ? "bg-accent/15 ring-1 ring-accent" : "hover:bg-surface-raised"
+                }`}
+              >
+                <Avatar name={p.name} photoUrl={p.photo_url} size={48} />
+                <span className="text-xs text-foreground-muted">{p.name}</span>
+              </button>
             ))}
-          </select>
+          </div>
           <input
             type="password"
             placeholder="Mot de passe"

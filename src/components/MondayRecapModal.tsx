@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAppContext } from "./AppProvider";
+import { Avatar } from "./Avatar";
 import { MessageComposer } from "./MessageComposer";
 import { fetchWeeklySummaries } from "@/lib/groupMessages";
 import { listProfiles } from "@/lib/profiles";
@@ -77,7 +78,10 @@ export function MondayRecapModal() {
             )}
             {summaries.map((summary) => (
               <div key={summary.profileId} className="rounded-xl bg-surface-raised p-3">
-                <p className="text-sm font-semibold">{summary.profileName}</p>
+                <div className="flex items-center gap-2">
+                  <Avatar name={summary.profileName} photoUrl={summary.profilePhotoUrl} size={28} />
+                  <p className="text-sm font-semibold">{summary.profileName}</p>
+                </div>
                 <div className="mt-2 space-y-1.5">
                   {summary.domains.map((d) => (
                     <div key={d.id} className="flex items-center justify-between text-xs">

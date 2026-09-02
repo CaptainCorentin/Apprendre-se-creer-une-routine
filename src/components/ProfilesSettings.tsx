@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppContext } from "./AppProvider";
+import { Avatar } from "./Avatar";
 import {
   createProfile,
   listProfiles,
   setAcceptsPiquant,
   setProfilePassword,
+  setProfilePhoto,
   setShowsMondayRecap,
+  uploadProfilePhoto,
   type ProfileSummary,
 } from "@/lib/profiles";
 
@@ -16,9 +19,14 @@ export function ProfilesSettings() {
   const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [newProfilePhoto, setNewProfilePhoto] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -53,9 +61,14 @@ export function ProfilesSettings() {
     setError(null);
     setSuccess(null);
     try {
-      await createProfile(name.trim(), password);
+      const newId = await createProfile(name.trim(), password);
+      if (newProfilePhoto) {
+        const url = await uploadProfilePhoto(newId, newProfilePhoto);
+        await setProfilePhoto(newId, url);
+      }
       setName("");
       setPassword("");
+      setNewProfilePhoto(null);
       setSuccess(`Profil "${name.trim()}" créé.`);
       setProfiles(await listProfiles());
     } catch (err) {
@@ -63,6 +76,22 @@ export function ProfilesSettings() {
       console.error(err);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleChangeMyPhoto(file: File) {
+    if (!profileId) return;
+    setPhotoBusy(true);
+    setPhotoError(null);
+    try {
+      const url = await uploadProfilePhoto(profileId, file);
+      await setProfilePhoto(profileId, url);
+      setProfiles(await listProfiles());
+    } catch (err) {
+      setPhotoError("Une erreur est survenue lors de l'upload.");
+      console.error(err);
+    } finally {
+      setPhotoBusy(false);
     }
   }
 
@@ -96,7 +125,10 @@ export function ProfilesSettings() {
       <div className="mt-3 space-y-2">
         {profiles.map((p) => (
           <div key={p.id} className="carbon-panel flex items-center justify-between rounded-xl p-3">
-            <span className="text-sm">{p.name}</span>
+            <div className="flex items-center gap-2">
+              <Avatar name={p.name} photoUrl={p.photo_url} size={32} />
+              <span className="text-sm">{p.name}</span>
+            </div>
             {p.id === profileId && (
               <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent-strong">
                 Toi
@@ -104,6 +136,34 @@ export function ProfilesSettings() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="carbon-panel mt-4 flex items-center gap-3 rounded-xl p-3">
+        <Avatar name={me?.name ?? ""} photoUrl={me?.photo_url} size={48} />
+        <div className="flex-1">
+          <p className="text-xs font-medium">Ma photo de profil</p>
+          <p className="mt-0.5 text-[11px] text-foreground-muted">
+            Affichée sur le récap du lundi et l&apos;onglet Entre nous.
+          </p>
+          {photoError && <p className="mt-1 text-xs text-accent-strong">{photoError}</p>}
+        </div>
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleChangeMyPhoto(file);
+          }}
+        />
+        <button
+          onClick={() => photoInputRef.current?.click()}
+          disabled={photoBusy}
+          className="rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-foreground-muted hover:border-accent hover:text-accent-strong disabled:opacity-50"
+        >
+          {photoBusy ? "Envoi…" : "Changer"}
+        </button>
       </div>
 
       <form onSubmit={handleAddProfile} className="carbon-panel mt-4 rounded-xl p-3">
@@ -122,6 +182,15 @@ export function ProfilesSettings() {
             placeholder="Mot de passe (4 caractères min.)"
             className="rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-sm outline-none focus:border-accent"
           />
+          <label className="text-xs text-foreground-muted">
+            Photo de profil (optionnel)
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setNewProfilePhoto(e.target.files?.[0] ?? null)}
+              className="mt-1 block w-full text-xs text-foreground-muted file:mr-2 file:rounded-lg file:border-0 file:bg-surface-raised file:px-3 file:py-1.5 file:text-xs file:text-foreground-muted"
+            />
+          </label>
         </div>
         {error && <p className="mt-2 text-xs text-accent-strong">{error}</p>}
         {success && <p className="mt-2 text-xs text-success">{success}</p>}

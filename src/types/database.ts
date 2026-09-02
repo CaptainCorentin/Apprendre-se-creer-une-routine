@@ -83,6 +83,7 @@ export interface GroupMessage {
 export interface ProfileWeekSummary {
   profileId: string;
   profileName: string;
+  profilePhotoUrl: string | null;
   acceptsPiquant: boolean;
   hasActivity: boolean;
   domains: {
