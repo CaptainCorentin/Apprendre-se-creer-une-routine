@@ -66,3 +66,29 @@ export interface IdolQuote {
 export interface IdolWithQuotes extends Idol {
   idol_quotes: IdolQuote[];
 }
+
+export type MessageKind = "encouragement" | "piquant";
+
+export interface GroupMessage {
+  id: string;
+  from_profile_id: string;
+  to_profile_id: string;
+  week_start_date: string;
+  kind: MessageKind;
+  message: string;
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface ProfileWeekSummary {
+  profileId: string;
+  profileName: string;
+  domains: {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+    done: number;
+    target: number;
+  }[];
+}

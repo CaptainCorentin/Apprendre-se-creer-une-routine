@@ -7,13 +7,14 @@ import { useAppContext } from "./AppProvider";
 const TABS = [
   { href: "/", label: "Aujourd'hui", icon: "🔥" },
   { href: "/journal", label: "Journal", icon: "📓" },
+  { href: "/entre-nous", label: "Entre nous", icon: "🤝" },
   { href: "/hall-of-fame", label: "Hall of Fame", icon: "🏆" },
   { href: "/settings", label: "Réglages", icon: "⚙️" },
 ];
 
 export function NavBar() {
   const pathname = usePathname();
-  const { ready, profileId, domains, journalDue } = useAppContext();
+  const { ready, profileId, domains, journalDue, unreadMessages } = useAppContext();
 
   if (!ready || !profileId || domains.length === 0 || pathname === "/setup" || pathname === "/profiles") {
     return null;
@@ -37,6 +38,9 @@ export function NavBar() {
                   {tab.icon}
                 </span>
                 {tab.href === "/journal" && journalDue && (
+                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent-strong" />
+                )}
+                {tab.href === "/entre-nous" && unreadMessages > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent-strong" />
                 )}
               </span>

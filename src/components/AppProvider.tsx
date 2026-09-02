@@ -12,6 +12,7 @@ import type { Domain } from "@/types/database";
 import { backfillMissedCheckins, fetchDomains } from "@/lib/data";
 import { clearStoredProfileId, getStoredProfileId, listProfiles, storeProfileId } from "@/lib/profiles";
 import { checkJournalDue } from "@/lib/journalStatus";
+import { countUnreadMessages } from "@/lib/groupMessages";
 
 interface AppContextValue {
   profileId: string | null;
@@ -24,6 +25,8 @@ interface AppContextValue {
   logout: () => void;
   journalDue: boolean;
   refreshJournalDue: () => Promise<void>;
+  unreadMessages: number;
+  refreshUnreadMessages: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -40,6 +43,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const [journalDue, setJournalDue] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -47,6 +51,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!profileId) return;
     const status = await checkJournalDue(profileId);
     setJournalDue(status.weekly || status.monthly);
+  }, [profileId]);
+
+  const refreshUnreadMessages = useCallback(async () => {
+    if (!profileId) return;
+    setUnreadMessages(await countUnreadMessages(profileId));
   }, [profileId]);
 
   const refreshDomains = useCallback(async () => {
@@ -60,6 +69,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setProfileId(null);
     setDomains([]);
     setJournalDue(false);
+    setUnreadMessages(0);
     router.replace("/profiles");
   }, [router]);
 
@@ -133,6 +143,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!profileId) return;
     checkJournalDue(profileId).then((status) => setJournalDue(status.weekly || status.monthly));
+    countUnreadMessages(profileId).then(setUnreadMessages);
   }, [profileId]);
 
   useEffect(() => {
@@ -171,6 +182,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         logout,
         journalDue,
         refreshJournalDue,
+        unreadMessages,
+        refreshUnreadMessages,
       }}
     >
       {children}
