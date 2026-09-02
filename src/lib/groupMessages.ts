@@ -25,6 +25,7 @@ export async function fetchWeeklySummaries(weekStartKey: string): Promise<Profil
       profileId: profile.id,
       profileName: profile.name,
       acceptsPiquant: profile.accepts_piquant,
+      hasActivity: checkins.length > 0,
       domains: domains.map((d) => ({
         id: d.id,
         name: d.name,

@@ -84,6 +84,7 @@ export interface ProfileWeekSummary {
   profileId: string;
   profileName: string;
   acceptsPiquant: boolean;
+  hasActivity: boolean;
   domains: {
     id: string;
     name: string;

@@ -51,30 +51,34 @@ export default function EntreNousPage() {
             <div key={summary.profileId} className="carbon-panel rounded-2xl p-4">
               <h2 className="font-semibold">{summary.profileName}</h2>
               <div className="mt-3 space-y-2">
-                {summary.domains.length === 0 && (
+                {!summary.hasActivity && (
+                  <p className="text-xs text-foreground-muted">Pas d&apos;imputations cette semaine.</p>
+                )}
+                {summary.hasActivity && summary.domains.length === 0 && (
                   <p className="text-xs text-foreground-muted">Aucun domaine actif.</p>
                 )}
-                {summary.domains.map((d) => (
-                  <div key={d.id}>
-                    <div className="flex items-center justify-between text-xs">
-                      <span>
-                        {d.icon} {d.name}
-                      </span>
-                      <span className="text-foreground-muted">
-                        {d.done}/{d.target}
-                      </span>
+                {summary.hasActivity &&
+                  summary.domains.map((d) => (
+                    <div key={d.id}>
+                      <div className="flex items-center justify-between text-xs">
+                        <span>
+                          {d.icon} {d.name}
+                        </span>
+                        <span className="text-foreground-muted">
+                          {d.done}/{d.target}
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.min(d.done / d.target, 1) * 100}%`,
+                            backgroundColor: d.color,
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${Math.min(d.done / d.target, 1) * 100}%`,
-                          backgroundColor: d.color,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
               <button
                 onClick={() =>

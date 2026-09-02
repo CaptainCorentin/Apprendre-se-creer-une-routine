@@ -38,7 +38,7 @@ export function MondayRecapModal() {
       const lastWeekStart = toDateKey(addDays(getWeekStart(today), -7));
       const data = await fetchWeeklySummaries(lastWeekStart);
       setWeekKey(lastWeekStart);
-      setSummaries(data.filter((s) => s.profileId !== profileId));
+      setSummaries(data.filter((s) => s.profileId !== profileId && s.hasActivity));
       setOpen(true);
     }
 
