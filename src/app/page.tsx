@@ -24,7 +24,7 @@ function todayFlag() {
 }
 
 export default function TodayPage() {
-  const { profileId, activeDomains, ready } = useAppContext();
+  const { profileId, activeDomains, ready, refreshMissingCheckins } = useAppContext();
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [idols, setIdols] = useState<IdolWithQuotes[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +90,7 @@ export default function TodayPage() {
     if (status === "none") {
       await deleteCheckin(domainId, dateKey);
       setCheckins((prev) => prev.filter((c) => !(c.domain_id === domainId && c.date === dateKey)));
+      if (isToday) refreshMissingCheckins();
       return;
     }
 
@@ -102,6 +103,8 @@ export default function TodayPage() {
       const withoutOld = prev.filter((c) => !(c.domain_id === domainId && c.date === dateKey));
       return [...withoutOld, saved];
     });
+
+    if (isToday) refreshMissingCheckins();
 
     // Les moments clés (streak cassé / palier / repos) ne se déclenchent que
     // pour une action sur le jour effectif courant, pas pour un rattrapage.

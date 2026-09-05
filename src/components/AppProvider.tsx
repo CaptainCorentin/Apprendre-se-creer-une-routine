@@ -9,10 +9,11 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Domain } from "@/types/database";
-import { backfillMissedCheckins, fetchDomains } from "@/lib/data";
+import { backfillMissedCheckins, fetchCheckinsForDateKey, fetchDomains } from "@/lib/data";
 import { clearStoredProfileId, getStoredProfileId, listProfiles, storeProfileId } from "@/lib/profiles";
 import { checkJournalDue } from "@/lib/journalStatus";
 import { countUnreadMessages } from "@/lib/groupMessages";
+import { getEffectiveDateKey } from "@/lib/date";
 
 interface AppContextValue {
   profileId: string | null;
@@ -27,6 +28,8 @@ interface AppContextValue {
   refreshJournalDue: () => Promise<void>;
   unreadMessages: number;
   refreshUnreadMessages: () => Promise<void>;
+  missingCheckinsCount: number;
+  refreshMissingCheckins: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -44,6 +47,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [journalDue, setJournalDue] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [missingCheckinsCount, setMissingCheckinsCount] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -58,6 +62,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUnreadMessages(await countUnreadMessages(profileId));
   }, [profileId]);
 
+  const refreshMissingCheckins = useCallback(async () => {
+    if (!profileId) return;
+    // Seuls les domaines quotidiens (pas de cible hebdo) comptent : un domaine
+    // à cible hebdo n'est jamais "en retard" un jour précis.
+    const daily = domains.filter((d) => d.active && !d.weekly_target);
+    if (daily.length === 0) {
+      setMissingCheckinsCount(0);
+      return;
+    }
+    const todayKey = getEffectiveDateKey();
+    const todaysCheckins = await fetchCheckinsForDateKey(profileId, todayKey);
+    const doneIds = new Set(todaysCheckins.map((c) => c.domain_id));
+    setMissingCheckinsCount(daily.filter((d) => !doneIds.has(d.id)).length);
+  }, [profileId, domains]);
+
   const refreshDomains = useCallback(async () => {
     if (!profileId) return;
     const list = await fetchDomains(profileId);
@@ -70,6 +89,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDomains([]);
     setJournalDue(false);
     setUnreadMessages(0);
+    setMissingCheckinsCount(0);
     router.replace("/profiles");
   }, [router]);
 
@@ -147,6 +167,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [profileId]);
 
   useEffect(() => {
+    if (!profileId) return;
+    const daily = domains.filter((d) => d.active && !d.weekly_target);
+    const todaysCheckinsPromise =
+      daily.length === 0 ? Promise.resolve([]) : fetchCheckinsForDateKey(profileId, getEffectiveDateKey());
+    todaysCheckinsPromise.then((todaysCheckins) => {
+      const doneIds = new Set(todaysCheckins.map((c) => c.domain_id));
+      setMissingCheckinsCount(daily.filter((d) => !doneIds.has(d.id)).length);
+    });
+  }, [profileId, domains]);
+
+  useEffect(() => {
     if (!ready) return;
 
     if (!profileId) {
@@ -184,6 +215,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         refreshJournalDue,
         unreadMessages,
         refreshUnreadMessages,
+        missingCheckinsCount,
+        refreshMissingCheckins,
       }}
     >
       {children}

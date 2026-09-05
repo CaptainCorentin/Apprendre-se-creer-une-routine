@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/components/AppProvider";
 import { NavBar } from "@/components/NavBar";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { ForcedJournalModals } from "@/components/ForcedJournalModals";
 import { MondayRecapModal } from "@/components/MondayRecapModal";
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <AppProvider>
           <main className="flex-1 pb-24">{children}</main>
           <NavBar />
+          <NotificationCenter />
           <ForcedJournalModals />
           <MondayRecapModal />
         </AppProvider>

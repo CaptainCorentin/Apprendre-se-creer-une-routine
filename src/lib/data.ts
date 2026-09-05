@@ -103,6 +103,17 @@ export async function fetchCheckinsSince(domainId: string, sinceDateKey: string)
   return data ?? [];
 }
 
+/** Checkins du profil pour une date précise (toutes les domaines confondus). */
+export async function fetchCheckinsForDateKey(profileId: string, dateKey: string): Promise<Checkin[]> {
+  const { data, error } = await supabase
+    .from("checkins")
+    .select("*")
+    .eq("profile_id", profileId)
+    .eq("date", dateKey);
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function fetchAllCheckins(profileId: string): Promise<Checkin[]> {
   const { data, error } = await supabase
     .from("checkins")
